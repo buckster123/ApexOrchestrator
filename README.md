@@ -209,8 +209,8 @@ flowchart TD
 ### Step-by-Step Setup
 1. **Clone the Repo**:
    ```
-   git clone https://github.com/yourusername/apex-orchestrator.git
-   cd apex-orchestrator
+   git clone https://github.com/buckster123/ApexOrchestrator.git
+   cd ApexOrchestrator
    ```
 
 2. **Create Virtual Environment**:
