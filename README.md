@@ -58,7 +58,7 @@ Transform your Raspberry Pi 5 into a full-fledged AI agent hub in under 10 minut
 ## 🛠 Technical Specifications
 
 ### Hardware Requirements
-- **Raspberry Pi 5**: 4GB+ RAM (8GB recommended for ChromaDB).
+- **Raspberry Pi 5**: 4GB+ RAM.
 - **Storage**: NVMe/SSD recommended, or 32GB+ fast SD104 microSD (for `./chroma_db/` and `./sandbox/`).
 - **OS**: Raspberry Pi OS (64-bit, Bookworm or later).
 - **Network**: Ethernet/WiFi for API calls (optional for offline mode).
