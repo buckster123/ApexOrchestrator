@@ -320,5 +320,5 @@ MIT License—free to use, modify, distribute. Attribute if sharing derivatives.
 - [ ] Advanced Analytics (Usage metrics, memory visualization).
 
 <div align="center">
-  <p><em>Built with ❤️ by xAI enthusiasts. Star us on GitHub to support edge AI!</em></p>
+  <p><em>Built with ❤️ by André. Star us on GitHub to support edge AI!</em></p>
 </div>
