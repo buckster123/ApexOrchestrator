@@ -113,46 +113,45 @@ The core loop integrates ReAct with CoT/ToT for planning. Updated Mermaid sequen
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant A as Apex Main Agent
-    participant S1 as Subagent 1 (Retriever)
-    participant S2 as Subagent 2 (Reasoner)
-    participant S3 as Subagent 3 (Generator)
-    participant T as Tools (FS/Code/Memory/Web)
-    participant M as Memory (RAG - Lazy Embed)
-    participant G as Grok API
+  participant U as User
+  participant A as Apex Main Agent
+  participant S1 as Subagent 1 (Retriever)
+  participant S2 as Subagent 2 (Reasoner)
+  participant S3 as Subagent 3 (Generator)
+  participant T as Tools (FS/Code/Memory/Web)
+  participant M as Memory (RAG)
+  participant G as Grok API
 
-    U->>A: Query (e.g., "Analyze sales data")
-    A->>A: Task Init (ToT: Decompose to subtasks)
-    A->>M: memory_insert (Plan JSON)
-    A->>S1: Route (Retrieve data)
-    S1->>S1: Think (Refine query)
-    S1->>T: Act (e.g., langsearch_web_search + fs_read_file - Batched)
-    T-->>S1: Observe (Results)
-    S1->>S1: Reflect (Score relevance >0.7? Cache check)
-    S1->>M: advanced_memory_consolidate (Embed if model loaded)
-    S1-->>A: Report (Output + Confidence)
+  U->>A: Query (e.g., "Analyze sales data")
+  A->>A: Task Init (ToT: Decompose to subtasks)
+  A->>M: memory_insert (Plan JSON)
+  A->>S1: Route (Retrieve data)
+  S1->>S1: Think (Refine query)
+  S1->>T: Act (e.g., langsearch_web_search)
+  T-->>S1: Observe (Results)
+  S1->>S1: Reflect (Score relevance >0.7?)
+  S1->>M: advanced_memory_consolidate (Embed)
+  S1-->>A: Report (Output + Confidence)
 
-    A->>S2: Route (Analyze)
-    S2->>S2: Think (ToT: Branch hypotheses)
-    S2->>T: Act (code_execution for trends; safe builtins)
-    T-->>S2: Observe (Output/Errors)
-    S2->>S2: Reflect (Cross-verify; lint if code)
-    S2-->>A: Report
+  A->>S2: Route (Analyze)
+  S2->>S2: Think (ToT: Branch hypotheses)
+  S2->>T: Act (code_execution for trends)
+  T-->>S2: Observe (Output/Errors)
+  S2->>S2: Reflect (Cross-verify)
+  S2-->>A: Report
 
-    A->>S3: Route (Generate)
-    S3->>S3: Think (CoT: Outline structure)
-    S3->>T: Act (fs_write_file plot.png; unescaped content)
-    T-->>S3: Observe (Success)
-    S3->>S3: Reflect (Self-score completeness)
-    S3-->>A: Report
+  A->>S3: Route (Generate)
+  S3->>S3: Think (CoT: Outline structure)
+  S3->>T: Act (fs_write_file plot.png)
+  T-->>S3: Observe (Success)
+  S3->>S3: Reflect (Self-score completeness)
+  S3-->>A: Report
 
-    A->>G: Aggregate + Call (w/ Tools; non-recursive loop)
-    G-->>A: Stream Response
-    A->>M: advanced_memory_prune (Weekly decay)
-    A->>U: Final Output (Structured; citations)
+  A->>G: Aggregate + Call (w/ Tools if needed)
+  G-->>A: Stream Response
+  A->>M: advanced_memory_prune (Cleanup)
+  A->>U: Final Output (Structured)
 ```
-
 ### Multi-Agent Simulation Diagram
 
 Mermaid graph showing subagent hierarchy (updated with optional agents):
