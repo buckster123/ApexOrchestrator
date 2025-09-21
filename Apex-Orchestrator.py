@@ -337,13 +337,24 @@ def advanced_memory_retrieve(user: str, convo_id: int, query: str, top_k: int = 
         return "Error: Vector memory is not available."
     try:
         query_emb = embed_model.encode(query).tolist()
+
+        # FIXED: Wrap multiple conditions in $and to satisfy Chroma's single-operator rule
+        where_clause = {
+            "$and": [
+                {"user": user},
+                {"convo_id": convo_id}
+            ]
+        }
+
         results = chroma_col.query(
             query_embeddings=[query_emb],
             n_results=top_k,
-            where={"user": user, "convo_id": convo_id},
-            include=["distances", "metadatas", "documents", "ids"]
+            where=where_clause,  # Updated to use the compound filter
+            include=["distances", "metadatas", "documents"]
         )
-        if not results or not results.get('ids') or not results['ids'][0]:
+
+        # ADDED: Early check for empty results to avoid index errors
+        if not results or not results.get('ids') or not results['ids']:
             return "No relevant memories found."
 
         retrieved = []
@@ -361,14 +372,15 @@ def advanced_memory_retrieve(user: str, convo_id: int, query: str, top_k: int = 
             ids_to_update.append(results['ids'][0][i])
             metadata_to_update.append({"salience": meta.get('salience', 1.0) + 0.1})
 
-        ### OPTIMIZATION: Batch update salience in a single call.
+        # OPTIMIZATION: Batch update salience in a single call.
         if ids_to_update:
             chroma_col.update(ids=ids_to_update, metadatas=metadata_to_update)
 
         retrieved.sort(key=lambda x: x['relevance'], reverse=True)
         return json.dumps(retrieved)
     except Exception as e:
-        return f"Error retrieving memory: {traceback.format_exc()}"
+        # ADDED: More specific error logging for debugging
+        return f"Error retrieving memory: {traceback.format_exc()}. If this is a where clause issue, check filter structure."
 
 def advanced_memory_prune(user: str, convo_id: int) -> str:
     """Prune low-salience memories."""
@@ -423,7 +435,7 @@ def db_query(db_path: str, query: str, params: list = []) -> str:
     except Exception as e:
         return f"DB error: {e}"
 
-WHITELISTED_COMMANDS = ['ls', 'grep', 'sed', 'cat', 'echo', 'pwd']
+WHITELISTED_COMMANDS = ['ls', 'grep', 'sed', 'cat', 'echo', 'pwd', 'grim']
 def shell_exec(command: str) -> str:
     cmd_parts = shlex.split(command)
     if not cmd_parts or cmd_parts[0] not in WHITELISTED_COMMANDS:
@@ -433,6 +445,119 @@ def shell_exec(command: str) -> str:
         return result.stdout.strip() + ("\nError: " + result.stderr.strip() if result.stderr else "")
     except Exception as e:
         return f"Shell error: {e}"
+
+def code_lint(language: str, code: str) -> str:
+    """Lint and format code snippets for multiple languages."""
+    lang = language.lower()
+    try:
+        if lang == 'python':
+            formatted = format_str(code, mode=FileMode(line_length=88))
+        elif lang == 'javascript':
+            opts = jsbeautifier.default_options()
+            formatted = jsbeautifier.beautify(code, opts)
+        elif lang == 'css':
+            opts = jsbeautifier.default_options()
+            formatted = jsbeautifier.beautify(code, opts)  # Uses jsbeautifier for CSS
+        elif lang == 'json':
+            formatted = json.dumps(json.loads(code), indent=4)
+        elif lang == 'yaml':
+            formatted = yaml.safe_dump(yaml.safe_load(code), indent=2)
+        elif lang == 'sql':
+            formatted = sqlparse.format(code, reindent=True, keyword_case='upper')
+        elif lang == 'xml':
+            dom = xml.dom.minidom.parseString(code)
+            formatted = dom.toprettyxml(indent="  ")
+        elif lang == 'html':
+            soup = BeautifulSoup(code, 'html.parser')
+            formatted = soup.prettify()
+        elif lang in ['c', 'cpp', 'c++']:
+            try:
+                formatted = subprocess.check_output(['clang-format', '-style=google'], input=code.encode()).decode()
+            except Exception as e:
+                return f"clang-format not available: {str(e)}"
+        elif lang == 'php':
+            try:
+                with tempfile.NamedTemporaryFile(suffix='.php', delete=False) as tmp:
+                    tmp.write(code.encode())
+                    tmp.flush()
+                    subprocess.check_call(['php-cs-fixer', 'fix', tmp.name, '--quiet'])
+                    with open(tmp.name, 'r') as f:
+                        formatted = f.read()
+                os.unlink(tmp.name)
+            except Exception as e:
+                return f"php-cs-fixer not available: {str(e)}"
+        elif lang == 'go':
+            try:
+                formatted = subprocess.check_output(['gofmt'], input=code.encode()).decode()
+            except Exception as e:
+                return f"gofmt not available: {str(e)}"
+        elif lang == 'rust':
+            try:
+                formatted = subprocess.check_output(['rustfmt', '--emit=stdout'], input=code.encode()).decode()
+            except Exception as e:
+                return f"rustfmt not available: {str(e)}"
+        else:
+            return "Unsupported language."
+        return formatted
+    except Exception as e:
+        return f"Lint error: {str(e)}"
+
+# API Simulate Tool - With Cache
+def api_simulate(url: str, method: str = 'GET', data: dict = None, mock: bool = True) -> str:
+    """Simulate or perform API calls."""
+    cache_args = {'url': url, 'method': method, 'data': data, 'mock': mock}
+    cached = get_cached_tool_result('api_simulate', cache_args)
+    if cached:
+        return cached
+    if mock:
+        result = json.dumps({"status": "mocked", "url": url, "method": method, "data": data})
+    else:
+        if not any(url.startswith(base) for base in API_WHITELIST):
+            result = "URL not in whitelist."
+        else:
+            try:
+                if method.upper() == 'GET':
+                    resp = requests.get(url, timeout=5)
+                elif method.upper() == 'POST':
+                    resp = requests.post(url, json=data, timeout=5)
+                else:
+                    result = "Unsupported method."
+                    set_cached_tool_result('api_simulate', cache_args, result)
+                    return result
+                resp.raise_for_status()
+                result = resp.text
+            except Exception as e:
+                result = f"API error: {str(e)}"
+    set_cached_tool_result('api_simulate', cache_args, result)
+    return result
+
+API_WHITELIST = [
+    'https://jsonplaceholder.typicode.com/',
+    'https://api.openweathermap.org/'  # Assuming free basics
+]  # Add more public APIs
+
+def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool = False, count: int = 5) -> str:
+    """Perform a web search using LangSearch API and return results as JSON."""
+    if not LANGSEARCH_API_KEY:
+        return "LangSearch API key not set—configure in .env."
+    url = "https://api.langsearch.com/v1/web-search"
+    payload = json.dumps({
+        "query": query,
+        "freshness": freshness,
+        "summary": summary,
+        "count": count
+    })
+    headers = {
+        'Authorization': f'Bearer {LANGSEARCH_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        return json.dumps(response.json())  # Return full JSON for AI to parse
+    except Exception as e:
+        return f"LangSearch error: {str(e)}"
+
 
 # Tool Schema for Structured Outputs
 TOOLS = [
@@ -705,6 +830,9 @@ TOOL_DISPATCHER = {
     "advanced_memory_consolidate": advanced_memory_consolidate,
     "advanced_memory_retrieve": advanced_memory_retrieve,
     "advanced_memory_prune": advanced_memory_prune,
+    "code_lint": code_lint,
+    "api_simulate": api_simulate,
+    "langsearch_web_search": langsearch_web_search,
 }
 
 ### BUG FIX & OPTIMIZATION: Refactored API wrapper to be non-recursive and use a tool dispatcher.
@@ -813,25 +941,69 @@ def login_page():
                     conn.commit()
                     st.success("Registered! Please login.")
 
-# Chat Page
+def load_history(convo_id):
+    """Loads a specific conversation from the database into the session state."""
+    c.execute("SELECT messages FROM history WHERE convo_id=? AND user=?", (convo_id, st.session_state['user']))
+    result = c.fetchone()
+    if result:
+        messages = json.loads(result[0])
+        st.session_state['messages'] = messages
+        st.session_state['current_convo_id'] = convo_id
+        st.rerun()
+
+def delete_history(convo_id):
+    """Deletes a specific conversation from the database."""
+    c.execute("DELETE FROM history WHERE convo_id=? AND user=?", (convo_id, st.session_state['user']))
+    conn.commit()
+    # If the deleted chat was the one currently loaded, clear the session
+    if st.session_state.get('current_convo_id') == convo_id:
+        st.session_state['messages'] = []
+        st.session_state['current_convo_id'] = None
+    st.rerun()
+
 def chat_page():
     st.title(f"Apex Chat - {st.session_state['user']}")
-    
+
+    # --- Sidebar UI ---
     with st.sidebar:
         st.header("Chat Settings")
-        model = st.selectbox("Select Model", ["grok-4", "grok-3-mini", "grok-4-fast"], key="model_select")
-        prompt_files = load_prompt_files()
-        selected_file = st.selectbox("Select System Prompt", prompt_files, key="prompt_select")
-        with open(os.path.join(PROMPTS_DIR, selected_file), "r") as f:
-            prompt_content = f.read()
-        custom_prompt = st.text_area("Edit System Prompt", value=prompt_content, height=200, key="custom_prompt")
+        model = st.selectbox("Select Model", ["grok-4-fast-reasoning", "grok-4", "grok-3-mini", "grok-4-fast"], key="model_select")
         
+        prompt_files = load_prompt_files()
+        if prompt_files:
+            selected_file = st.selectbox("Select System Prompt", prompt_files, key="prompt_select")
+            with open(os.path.join(PROMPTS_DIR, selected_file), "r") as f:
+                prompt_content = f.read()
+            custom_prompt = st.text_area("Edit System Prompt", value=prompt_content, height=200, key="custom_prompt")
+        else:
+            st.warning("No prompt files found in ./prompts/")
+            custom_prompt = st.text_area("System Prompt", value="You are a helpful AI.", height=200, key="custom_prompt")
+
+        # The key for the file uploader is important
         uploaded_images = st.file_uploader("Upload Images", type=["jpg", "png"], accept_multiple_files=True, key="uploaded_images")
         enable_tools = st.checkbox("Enable Tools (Sandboxed)", value=False, key='enable_tools')
         
-        st.header("Chat History")
-        # History loading/deleting logic here
+        st.divider()
 
+        if st.button("➕ New Chat", use_container_width=True):
+            st.session_state['messages'] = []
+            st.session_state['current_convo_id'] = None
+            st.rerun()
+
+        st.header("Chat History")
+        c.execute("SELECT convo_id, title FROM history WHERE user=? ORDER BY convo_id DESC", (st.session_state["user"],))
+        histories = c.fetchall()
+
+        for convo_id, title in histories:
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                if st.button(title, key=f"load_{convo_id}", use_container_width=True):
+                    load_history(convo_id)
+            with col2:
+                if st.button("🗑️", key=f"delete_{convo_id}", use_container_width=True):
+                    delete_history(convo_id)
+
+    # --- Main Chat Interface ---
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
     if "current_convo_id" not in st.session_state:
@@ -839,7 +1011,6 @@ def chat_page():
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            ### BUG FIX & SECURITY: Always render AI output safely.
             st.markdown(msg["content"], unsafe_allow_html=False)
 
     if prompt := st.chat_input("What would you like to discuss?"):
@@ -850,9 +1021,14 @@ def chat_page():
         with st.chat_message("assistant"):
             response_container = st.empty()
             full_response = ""
+            
+            ### BUG FIX: Use the return value of the widget directly
+            # This ensures we only use the images present at the moment the prompt is sent.
+            images_to_process = uploaded_images if uploaded_images else []
+
             generator = call_xai_api(
                 model, st.session_state.messages, custom_prompt,
-                stream=True, image_files=uploaded_images, enable_tools=enable_tools
+                stream=True, image_files=images_to_process, enable_tools=enable_tools
             )
             for chunk in generator:
                 full_response += chunk
@@ -860,11 +1036,17 @@ def chat_page():
             response_container.markdown(full_response, unsafe_allow_html=False)
             
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        
+        ### BUG FIX: The illegal line `st.session_state['uploaded_images'] = []` has been removed.
+        # The images will persist in the uploader until the user manually clears them, preventing the crash.
 
         # Save to History
-        title = st.session_state.messages[0]['content'][:50]
+        title_message = next((msg['content'] for msg in st.session_state.messages if msg['role'] == 'user'), "New Chat")
+        title = (title_message[:40] + '...') if len(title_message) > 40 else title_message
+        
         messages_json = json.dumps(st.session_state.messages)
-        if st.session_state.current_convo_id is None:
+        
+        if st.session_state.get("current_convo_id") is None:
             c.execute("INSERT INTO history (user, title, messages) VALUES (?, ?, ?)",
                       (st.session_state['user'], title, messages_json))
             st.session_state.current_convo_id = c.lastrowid
@@ -872,6 +1054,7 @@ def chat_page():
             c.execute("UPDATE history SET title=?, messages=? WHERE convo_id=?",
                       (title, messages_json, st.session_state.current_convo_id))
         conn.commit()
+        st.rerun()
 
 # Main App Logic
 if __name__ == "__main__":
