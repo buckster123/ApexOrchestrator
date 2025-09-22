@@ -21,7 +21,7 @@ This is the root folder structure for a fresh backend sandbox setup.The structur
 The design separates concerns: global configs and data from project-specific work, with Git repositories nested under `/projects/` to keep them isolated. This setup accommodates current functions and future use-cases, such as adding ML models or API integrations, without root clutter.
 
 **Key Principles:**
-- **Scalability**: Start lean; expand subfolders as needed (e.g., add `/projects/ml-experiment/`).
+- **Scalability**: Start with the default; expand subfolders as needed (e.g., add `/projects/ml-experiment/`).
 - **Tool Compatibility**: Paths are relative and short to minimize errors in tool calls (e.g., `fs_read_file("data/raw/sales.csv")`).
 - **Persistence**: Use memory tools for quick state; FS for durable artifacts; prune temps/logs periodically.
 - **Versioning**: No root Git; each project can init its own via `git_ops`.
@@ -33,10 +33,10 @@ The design separates concerns: global configs and data from project-specific wor
   - If [INITIALIZED] load structure, configs and variables into working memory. 
   - If sandbox is not [INITIALIZED], initialize top-level folders: Run batched `fs_mkdir` on configs, data, etc. Append "[INITIALIZED] [TIMESTAMP] [CHANGE: short concise description]" to README.md at first setup, 
   - If sandbox is not [INITIALIZED], Initialize, and customize configs/ env.json for your setup, and any user specifications given.
-  - Any changes appends changes: "[INITIALIZED] [TIMESTAMP] [CHANGE: short concise description]" at file-system changes.
+  - Any changes appends: "[INITIALIZED] [TIMESTAMP] [CHANGE: short concise description]" to README.md.
   
 
-## Default Folder Structure (expandable; append changes to "sandbox/README.md")
+## Default Folder Structure (expandable; append changes to README.md)
 Visualized as an ASCII tree for clarity. All paths are relative to `./sandbox/` (root).
 
 ```
