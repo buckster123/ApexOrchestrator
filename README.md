@@ -1,20 +1,16 @@
 # Apex Orchestrator: AI-Powered Chat Agent for Raspberry Pi 5
 
 
-
-[![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)  
-[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=Streamlit&logoColor=white)](https://streamlit.io/)  
-[![xAI Powered](https://img.shields.io/badge/Powered%20by-xAI-000000?style=flat&logo=groq&logoColor=white)](https://x.ai/)  
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
-[![Stars](https://img.shields.io/github/stars/yourusername/apex-orchestrator?style=social)](https://github.com/yourusername/apex-orchestrator)  
+[![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)  [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=Streamlit&logoColor=white)](https://streamlit.io/)  [![xAI Powered](https://img.shields.io/badge/Powered%20by-xAI-000000?style=flat&logo=groq&logoColor=white)](https://x.ai/)  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  [![Stars](https://img.shields.io/github/stars/yourusername/apex-orchestrator?style=social)](https://github.com/yourusername/apex-orchestrator)  
 
 ![Apex Orchestrator Banner](https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png)  
+
 
 🚀 **Apex Orchestrator** is a lightweight, self-contained AI chat agent optimized for single-user setups on low-cost hardware like the Raspberry Pi 5. Powered by xAI's Grok models, it delivers secure authentication, persistent chat history, and a suite of sandboxed tools for file management, code execution, web search, and advanced memory—all in a sleek, dark-mode Streamlit UI. Ideal for hobbyists, tinkerers, or devs seeking an open-source AI sidekick without cloud dependencies or high overhead.
 
 ## 🌟 Features
 - **Secure Auth & History**: Hashed passwords, auto-saving chats with load/delete options.
-- **Custom Prompts**: Load from `./prompts/`—focus on "big-apex.txt" (pseudo-Python structured for efficiency) as the main agent persona. Built-in defaults act as backups for robustness.
+- **Custom Prompts**: Load from `./prompts/`—focus on "big-apex.txt" (pseudo-Python structured for efficiency) as the main agent persona. Built-in defaults act as backups—auto-created if `./prompts/` is empty or files are lost, ensuring the app always works out-of-box.
 - **Sandboxed Tools**: File I/O, code REPL, Git, shell, linting, API mocks, web search—capped at 5 iterations to prevent loops.
 - **Smart Memory**: SQLite + vector embeddings (ChromaDB) with lazy loading and salience-based pruning.
 - **Multimodal**: Image uploads for vision queries.
@@ -28,42 +24,44 @@
 | **Prompts** | Big-Apex as core; builtins as backups. | Efficient ingestion for speed. |
 
 ## 📊 System Diagrams
+Visualize the magic! Below are Mermaid graphs outlining the core workflows and logic. (Render in tools like Mermaid Live or GitHub's preview.)
 
 ### 1. High-Level App Flow (Python Logic)
 This shows the script's main execution path—from startup to chat interactions.
 
 ```mermaid
 graph TD
-    A[Start: Load Env & DB Setup] --> B{Logged In?}
+    A[Start: Load Env and DB Setup] --> B{Logged In?}
     B -->|No| C[Login/Register Page]
     C --> D[Auth Success: Set Session]
     B -->|Yes| E[Chat Page: Sidebar + Main UI]
     E --> F[Select Model/Prompt/Tools]
     F --> G[User Input: Chat Prompt + Images]
     G --> H[API Call: xAI with Tools]
-    H --> I[Tool Dispatch Loop (Max 5 Iterations)]
-    I -->|Tool Called| J[Execute: e.g., fs_write_file, code_execution]
+    H --> I[Tool Dispatch Loop Max 5 Iterations]
+    I -->|Tool Called| J[Execute: e.g. fs_write_file, code_execution]
     J --> K[Return Results to API]
     H --> L[Stream Response to UI]
     L --> M[Save History to DB]
     M --> N[Loop: Next User Input]
 ```
 
-### 2. Agent Workflow
+### 2. Agent Workflow (Big-Apex Prompt Focus)
+The "big-apex" prompt (pseudo-Python class) simulates a multi-agent system. This graph captures the modular flow: planning, subagents, and aggregation.
 
 ```mermaid
 graph TD
-    Start[User Query] --> Init[Task Initialization: Parse & Decompose (CoT/ToT)]
+    Start[User Query] --> Init[Task Initialization: Parse and Decompose CoT/ToT]
     Init --> Plan[Generate Plans: Quick/Deep/Balanced -> Select Best]
-    Plan --> Assign[Assign Subtasks to Subagents (Up to 5)]
+    Plan --> Assign[Assign Subtasks to Subagents Up to 5]
     Assign --> Exec[Subtask Execution: ReAct Loops per Subagent]
     Exec -->|Retriever: Gather Data| R[Tools: Memory Retrieve / Web Search / FS Read]
     Exec -->|Reasoner: Analyze| S[Tools: Code Exec / DB Query / Git Ops]
     Exec -->|Generator: Synthesize| T[Tools: FS Write / Code Lint]
-    Exec -->|Validator: Verify (Optional)| U[Tools: Memory Retrieve / Fact-Check]
-    Exec -->|Optimizer: Refine (Optional)| V[Tools: Memory Prune / Cleanup]
-    Exec --> Aggregate[Aggregation: Merge Outputs (Weighted by Confidence)]
-    Aggregate --> Reflect[Global ReAct: Assess & Iterate (Max 5 Cycles)]
+    Exec -->|Validator: Verify Optional| U[Tools: Memory Retrieve / Fact-Check]
+    Exec -->|Optimizer: Refine Optional| V[Tools: Memory Prune / Cleanup]
+    Exec --> Aggregate[Aggregation: Merge Outputs Weighted by Confidence]
+    Aggregate --> Reflect[Global ReAct: Assess and Iterate Max 5 Cycles]
     Reflect -->|Done| Final[Finalization: Polish Output + Cleanup]
     Final --> End[User Response]
 ```
@@ -75,15 +73,15 @@ How tools are handled in the API loop—key for stability.
 flowchart TD
     A[API Response with Tool Calls] --> B{Has Tools?}
     B -->|No| C[Stream Final Response]
-    B -->|Yes| D[Begin Transaction (DB Begin)]
+    B -->|Yes| D[Begin Transaction DB Begin]
     D --> E[Loop Over Tool Calls]
-    E --> F[Parse Args & Dispatch via TOOL_DISPATCHER]
-    F -->|e.g., Memory Tools| G[Add User/Convo ID]
+    E --> F[Parse Args and Dispatch via TOOL_DISPATCHER]
+    F -->|e.g. Memory Tools| G[Add User/Convo ID]
     F -->|Other Tools| H[Execute: Sandboxed Path Check]
     H --> I[Cache/Handle Errors]
-    I --> J[Yield Partial Result (First 200 Chars)]
+    I --> J[Yield Partial Result First 200 Chars]
     J --> K[Collect Outputs]
-    K --> L[Commit DB & Append to Messages]
+    K --> L[Commit DB and Append to Messages]
     L --> M{Iterations < 5?}
     M -->|Yes| A
     M -->|No| N[Abort: Error Message]
@@ -120,7 +118,7 @@ flowchart TD
 2. **Chat**:
    - Sidebar: Pick model, prompt (load from `./prompts/`), enable tools.
    - Main: Type queries, upload images—watch streaming magic.
-3. **Prompts Focus**: Use "big-apex.txt" (pseudo-Python structured) as your go-to for advanced agent workflows. Built-ins (e.g., "tools-enabled.txt") are backups—auto-created if `./prompts/` is empty or files are lost, ensuring the app always works out-of-box.
+3. **Prompts Focus**: Use "big-apex.txt" (pseudo-Python structured) as your go-to for advanced agent workflows. Built-ins (e.g., "tools-enabled.txt") are backups—auto-created if `./prompts/` is empty or files are lost.
 4. **Tools**: Toggle on for power—e.g., "Lint this Python code" triggers `code_lint`.
 5. **Customization**: Drop custom prompts in `./prompts/` (e.g., copy our pseudo-Python class into "big-apex.txt").
 
