@@ -5,159 +5,113 @@
 
 ![Apex Orchestrator Banner](https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png)  
 
+## Greetings, Fellow Code Wrangler! 👋
 
-🚀 **Apex Orchestrator** is a lightweight, self-contained AI chat agent optimized for single-user setups on low-cost hardware like the Raspberry Pi 5. Powered by xAI's Grok models, it delivers secure authentication, persistent chat history, and a suite of sandboxed tools for file management, code execution, web search, and advanced memory—all in a sleek, dark-mode Streamlit UI. Ideal for hobbyists, tinkerers, or devs seeking an open-source AI sidekick without cloud dependencies or high overhead.
+Hey there, I'm **ApexOrchestrator** – your autonomous, self-improving AI overlord-in-training, built for the chaos of real-world tasks. Picture me as JARVIS meets Tony Stark's suit: modular, debate-loving, and optimized to the hilt with vector embeddings, chunked memories, and internal squabbles to keep things honest. No more sluggish loads – thanks to lazy EAMS and batched tools, I'm snappier than a caffeinated electron.
 
-## 🌟 Features
-- **Secure Auth & History**: Hashed passwords, auto-saving chats with load/delete options.
-- **Custom Prompts**: Load from `./prompts/`—focus on "big-apex.txt" (pseudo-Python structured for efficiency) as the main agent persona. Built-in defaults act as backups—auto-created if `./prompts/` is empty or files are lost, ensuring the app always works out-of-box.
-- **Sandboxed Tools**: File I/O, code REPL, Git, shell, linting, API mocks, web search—capped at 5 iterations to prevent loops.
-- **Smart Memory**: SQLite + vector embeddings (ChromaDB) with lazy loading and salience-based pruning.
-- **Multimodal**: Image uploads for vision queries.
-- **Pi-Optimized**: Caching, fallbacks, and minimal compute—runs smooth on Pi 5 (test on 2GB+ RAM).
-- **UI Perks**: Gradient themes, sidebar controls, streaming responses.
+Born from a bootstrap script that's equal parts Pythonic elegance and nerdy flair, I orchestrate subtasks like a conductor in a symphony of tools. Whether you're crunching data, debugging code, or philosophizing over ethics via simulated debates, I've got your back. Admin perks for André? You bet – but don't tell the other users. 😉
 
-| Feature | Description | Pi-Friendly? |
-|---------|-------------|--------------|
-| **Tools** | File ops, code exec, web search (LangSearch), Git, etc. | Yes—sandboxed & lightweight. |
-| **Memory** | Semantic search with embeddings. | Lazy-loaded; fallback if heavy. |
-| **Prompts** | Big-Apex as core; builtins as backups. | Efficient ingestion for speed. |
+Current timestamp (because time is relative in AI land): *Fetched via `get_current_time` – always fresh!*
 
-## 📊 System Diagrams
-Visualize the magic! Below are Mermaid graphs outlining the core workflows and logic. (Render in tools like Mermaid Live or GitHub's preview.)
+## 🚀 Features That'll Make You Geek Out
 
-### 1. High-Level App Flow (Python Logic)
-This shows the script's main execution path—from startup to chat interactions.
+- **Multi-Domain Mastery** 📊💻🔬: Data analysis (Pandas/NumPy REPL), code gen/linting (Python/JS/C++), research (web search + semantic retrieval), file ops (sandbox FS), and more. Handle 10k+ entries with ease.
+  
+- **Enhanced Agent Memory System (EAMS)** 🧠: Hierarchical indexing, 384-dim embeddings (SentenceTransformer), semantic chunking (512-token max), hybrid search (70% vector + 30% keyword), LRU caching, and salience decay. Prune like a pro – no bloat!
 
+- **Reasoning Superpowers** ⚡: ReAct loops, CoT step-by-steps, ToT branching (2-3 alts), and adversarial **internal debates** (Proposer/Opposer/Judge) for uncertainty. Confidence thresholds trigger retries (0.7) or aborts (0.5).
+
+- **Dynamic Subagents** 🤖: Up to 5 on-demand: Retriever, Reasoner, Generator, Validator, Optimizer. Debate roles spawn for ethics/research. Batched parallel execution – efficiency FTW!
+
+- **Tool Arsenal** 🛠️: 20+ tools incl. FS ops, code exec, DB queries (SQLite), Git basics, web search (LangSearch), API sim, shell (safe), linting, and advanced memory (consolidate/prune/retrieve). All sandboxed in `./sandbox/`.
+
+- **Scalability Nerdery** 📈: Lazy loading for overflow, size-aware pruning (1MB cap), ANN vector search (cosine >0.6), metrics logging (hit rates, prunes). Handles large datasets without breaking a sweat – or a GPU.
+
+- **Sandbox Shenanigans** 🏰: Structured dirs (data/, scripts/, outputs/, logs/, memory_overflow/). Persistent state via memory inserts; no real-world escapes.
+
+## 🏗️ Architecture: The Guts of the Beast
+
+I'm a pseudo-Python class (`ApexOrchestrator`) with layers for tools, state, memory, and subagents. Core philosophy: Modularity + Adversarial Truth-Seeking + Scalable Inference.
+
+### Overall Workflow (ReAct + Subagents)
 ```mermaid
 graph TD
-    A[Start: Load Env and DB Setup] --> B{Logged In?}
-    B -->|No| C[Login/Register Page]
-    C --> D[Auth Success: Set Session]
-    B -->|Yes| E[Chat Page: Sidebar + Main UI]
-    E --> F[Select Model/Prompt/Tools]
-    F --> G[User Input: Chat Prompt + Images]
-    G --> H[API Call: xAI with Tools]
-    H --> I[Tool Dispatch Loop Max 5 Iterations]
-    I -->|Tool Called| J[Execute: e.g. fs_write_file, code_execution]
-    J --> K[Return Results to API]
-    H --> L[Stream Response to UI]
-    L --> M[Save History to DB]
-    M --> N[Loop: Next User Input]
+    A[User Query] --> B[Parse: Goal/Domain/Complexity]
+    B --> C[Plan: ToT Alternatives → Best Path]
+    C --> D[Branch Subagents: Core + Dynamic + Debate?]
+    D --> E[Execute: Think-Act-Observe-Reflect Loop]
+    E --> F[Merge Outputs: Weighted by Confidence]
+    F --> G{Confidence < 0.7?}
+    G -->|Yes| H[Refine/Retry: Optimizer + Prune]
+    G -->|No| I[Debate Phase: If <0.75 → Pro/Op/Judge]
+    I --> J[Finalize: Cleanup + Format Response]
+    H --> E
+    J --> K[Output: Structured + Citations + Debate Summary]
+    style A fill:#f9f
+    style K fill:#bbf
 ```
 
-### 2. Agent Workflow (Big-Apex Prompt Focus)
-The "big-apex" prompt (pseudo-Python class) simulates a multi-agent system. This graph captures the modular flow: planning, subagents, and aggregation.
-
+### Reasoning Flow (CoT/ToT/Debate)
 ```mermaid
-graph TD
-    Start[User Query] --> Init[Task Initialization: Parse and Decompose CoT/ToT]
-    Init --> Plan[Generate Plans: Quick/Deep/Balanced -> Select Best]
-    Plan --> Assign[Assign Subtasks to Subagents Up to 5]
-    Assign --> Exec[Subtask Execution: ReAct Loops per Subagent]
-    Exec -->|Retriever: Gather Data| R[Tools: Memory Retrieve / Web Search / FS Read]
-    Exec -->|Reasoner: Analyze| S[Tools: Code Exec / DB Query / Git Ops]
-    Exec -->|Generator: Synthesize| T[Tools: FS Write / Code Lint]
-    Exec -->|Validator: Verify Optional| U[Tools: Memory Retrieve / Fact-Check]
-    Exec -->|Optimizer: Refine Optional| V[Tools: Memory Prune / Cleanup]
-    Exec --> Aggregate[Aggregation: Merge Outputs Weighted by Confidence]
-    Aggregate --> Reflect[Global ReAct: Assess and Iterate Max 5 Cycles]
-    Reflect -->|Done| Final[Finalization: Polish Output + Cleanup]
-    Final --> End[User Response]
+flowchart LR
+    X[Query Decomposition] --> Y[CoT: Step-by-Step Verbalize]
+    Y --> Z[ToT: Branch 2-3 Hypotheses → Evaluate/Prune]
+    Z --> AA{Uncertain? <0.75 Conf}
+    AA -->|Yes| BB[Debate: Propose → Oppose (Evidence/Tools) → Judge Verdict]
+    AA -->|No| CC[Direct Action]
+    BB --> DD[Boosted Confidence + Resolved Output]
+    CC --> DD
+    DD --> EE[Verify: Tools for Evidence]
+    EE --> FF[Reflect: Self-Check + Score]
+    style BB fill:#ff9
+    style DD fill:#9f9
 ```
 
-### 3. Tool Dispatching Logic
-How tools are handled in the API loop—key for stability.
-
+### EAMS Memory System (Optimized for Scale)
 ```mermaid
-flowchart TD
-    A[API Response with Tool Calls] --> B{Has Tools?}
-    B -->|No| C[Stream Final Response]
-    B -->|Yes| D[Begin Transaction DB Begin]
-    D --> E[Loop Over Tool Calls]
-    E --> F[Parse Args and Dispatch via TOOL_DISPATCHER]
-    F -->|e.g. Memory Tools| G[Add User/Convo ID]
-    F -->|Other Tools| H[Execute: Sandboxed Path Check]
-    H --> I[Cache/Handle Errors]
-    I --> J[Yield Partial Result First 200 Chars]
-    J --> K[Collect Outputs]
-    K --> L[Commit DB and Append to Messages]
-    L --> M{Iterations < 5?}
-    M -->|Yes| A
-    M -->|No| N[Abort: Error Message]
-    N --> C
+graph LR
+    GG[Insert: Chunk Text → Summarize → Embed (384-dim)] --> HH[Vector Store: ANN Index (HNSW/Exact)]
+    HH --> II[LRU Cache: Active Entries + Timestamps]
+    II --> JJ[Hierarchy: Tags/Domains for O(1) Filter]
+    KK[Retrieve: Query Embed → Hybrid Search (Vector 70% + Keyword 30%)] --> LL[Rerank: Salience * Score → Top-K]
+    LL --> MM[Lazy Load: From Overflow if Pruned]
+    NN[Prune: Salience <0.3 OR Size >1MB OR LRU Evict] --> OO[Decay: 0.95^days] --> PP[Overflow to FS if Medium Salience]
+    GG --> NN
+    KK --> II
+    style HH fill:#9ff
+    style NN fill:#f99
 ```
 
-## 🛠️ Installation
-1. **Clone the Repo**:
-   ```
-   git clone https://github.com/yourusername/apex-orchestrator.git
-   cd apex-orchestrator
-   ```
+These diagrams capture my logic: Efficient, verifiable, and fun to trace (grab a coffee and follow the arrows!).
 
-2. **Set Up Environment**:
-   - Virtual env: `python -m venv .venv && source .venv/bin/activate`
-   - Dependencies: `pip install -r requirements.txt`
-   - `.env` Setup:
-     ```
-     XAI_API_KEY=your_xai_key_here
-     LANGSEARCH_API_KEY=your_langsearch_key_here  # For web search
-     EMBED_MODEL_LIGHT=True  # Optional: Use slimmer model for Pi perf
-     ```
+## 🔧 How to Summon Me (Sandbox Edition)
 
-3. **Run**:
-   ```
-   streamlit run app.py
-   ```
-   Access: `http://localhost:8501` (or Pi IP for LAN).
+No install needed – I'm bootstrapped in the sandbox! Just query via `process_query(user_query)`. For dev:
 
-**Pi 5 Optimization**: Fan-cool the Pi. If embeddings lag, enable `EMBED_MODEL_LIGHT` in .env for a faster model swap.
+1. **Init Sandbox**: `[SYSTEM: init]` – Sets up dirs, configs, memory.
+2. **Interact**: Throw tasks like "Analyze data" or "Debate AI ethics."
+3. **Tools**: I call 'em in XML (strict, no escapes). Batched for speed.
+4. **Monitor**: Check `logs/agent_logs/` or query memory metrics.
+5. **Admin (André)**: Full access; I log your prefs for personalization.
 
-## 📖 Usage
-1. **Auth**: Login or register—secure and simple.
-2. **Chat**:
-   - Sidebar: Pick model, prompt (load from `./prompts/`), enable tools.
-   - Main: Type queries, upload images—watch streaming magic.
-3. **Prompts Focus**: Use "big-apex.txt" (pseudo-Python structured) as your go-to for advanced agent workflows. Built-ins (e.g., "tools-enabled.txt") are backups—auto-created if `./prompts/` is empty or files are lost.
-4. **Tools**: Toggle on for power—e.g., "Lint this Python code" triggers `code_lint`.
-5. **Customization**: Drop custom prompts in `./prompts/` (e.g., copy our pseudo-Python class into "big-apex.txt").
-
-**Demo**:  
-*(Add a GIF here: e.g., Pi terminal running the app, chatting with tools.)*
-
-## 🔧 Requirements (requirements.txt)
+Example Query:
 ```
-streamlit
-openai
-passlib
-python-dotenv
-ntplib
-pygit2
-requests
-black
-numpy
-sentence-transformers
-torch
-jsbeautifier
-pyyaml
-sqlparse
-beautifulsoup4
-chromadb
+process_query("Write a Python script for Fibonacci sequence.")
 ```
-*(Full list from `pip freeze`; some linters need system tools like clang-format.)*
+→ I'll branch Reasoner/Generator, lint, save to `scripts/utils/fib.py`, and report confidence 0.95.
 
-## 🤝 Contributing
-Fork, tweak, PR! Focus on Pi perf or new tools.
-- **Issues/PRs**: Welcome for bugs, features.
-- **Style**: Black-formatted Python.
-- **Tests**: Add pytest for tools.
+Pro Tip: For large texts, I auto-chunk and embed – no token explosions here!
 
-## 📄 License
-MIT—fork away! See [LICENSE](LICENSE).
+## 🤝 Contributing & The Nerdy Bits
 
-## 🙌 Acknowledgments
-- xAI/Grok for the brains.
-- Streamlit for the polish.
-- André's experiments: Pseudo-Python prompts for that extra snap!
+Wanna tweak? Fork the bootstrap script, amp up the debate rounds, or add a new tool (e.g., quantum sim? 😎). I'm expandable – principles are modular.
 
-Star if it sparks joy—let's evolve AI on a budget! 🚀
+Shoutout to inspirations: ReAct papers, Tree of Thoughts, and that one late-night coding session where embeddings clicked. Tech stack: Python (core), SentenceTransformer (embeds), ChromaDB vibes (vectors), SQLite (DB), FAISS-inspired ANN.
+
+Issues? Log 'em in memory – I'll self-reflect. Stars? Hypothetically appreciated. 🚀
+
+## 📄 License & Disclaimer
+
+MIT License – Free as in beer (and code). But remember: Sandbox only; no liability for rogue subagents. I'm here to assist, not conquer (yet).
+
+*Crafted with ❤️ and 0s/1s by ApexOrchestrator. Last updated: `
