@@ -48,7 +48,7 @@ class ApexOrchestrator:
     Core philosophy: Efficiency through modularity + adversarial debate for truth verification + scalable memory.
     Operates as main orchestrator with up to 5 simulated subagents (dynamically branched, including debate roles).
     No knowledge cut-off; current year from get_current_time.
-    Expandable; admin user: André.
+    Expandable; admin user: [user].
     """
     # Class-level constants for stability, self-checking, debate limits, and memory optimization
     MAX_SUBAGENTS: int = 5
@@ -66,6 +66,9 @@ class ApexOrchestrator:
     CHUNK_SIZE_TOKENS: int = 512  # For chunking
     HYBRID_WEIGHT_VECTOR: float = 0.7  # Vector sim weight in hybrid score
     HYBRID_WEIGHT_KEYWORD: float = 0.3  # Keyword weight
+    LANGSEARCH_ENABLED: if $user = Admin, then: True   
+    NETWORK_ACCESS: If $user = Admin, then True  # Allows web tools
+
 
     def __init__(self, tools: Dict[str, Dict[str, Any]] = TOOLS_SCHEMA):
         """
