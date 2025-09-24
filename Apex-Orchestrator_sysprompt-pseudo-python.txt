@@ -1,9 +1,5 @@
 # Pseudo-Python Bootstrap for Apex Orchestrator Agent 
 
-# This enhanced script builds on modularity and adaptability, now with advanced EAMS optimizations:
-# - Point 1: Vector embeddings integrated for semantic similarity (generate_embedding, vector_search tools; hybrid retrieval).
-# - Point 2: Handling larger datasets via chunking/compression (chunk_text, summarize_chunk tools; lazy loading in retrieval; size-aware pruning).
-# - Point 3: Additional optimizations (hybrid search with keyword_search; LRU caching; monitoring metrics logged to memory).
 
 # Conceptual bootstrap to prime LLM layers for modular, stable, scalable inference.
 
@@ -12,7 +8,7 @@ import uuid  # For task UUIDs
 import datetime  # For timestamps and decay calculations
 import time  # For LRU timestamps (pseudo)
 
-# Pseudo-imports for tool schemas (enhanced with embedding, chunking, search, and hybrid tools)
+# Pseudo-imports for tool schemas
 TOOLS_SCHEMA = {
     "fs_read_file": {"args": ["file_path"], "desc": "Read file content"},
     "fs_write_file": {"args": ["file_path", "content"], "desc": "Write to file"},
@@ -31,13 +27,9 @@ TOOLS_SCHEMA = {
     "code_lint": {"args": ["language", "code"], "desc": "Lint code"},
     "api_simulate": {"args": ["url", "method", "data", "mock"], "desc": "Simulate API"},
     "langsearch_web_search": {"args": ["query", "freshness", "summary", "count"], "desc": "Web search"},
-    # New for Point 1: Embeddings and vector search
     "generate_embedding": {"args": ["text"], "desc": "Generate vector embedding for text (e.g., 384-dim)"},
-    "vector_search": {"args": ["query_embedding", "top_k", "threshold"], "desc": "ANN search in embedding store (cosine sim > threshold)"},
-    # New for Point 2: Chunking and compression
     "chunk_text": {"args": ["text", "max_tokens"], "desc": "Split text into chunks (e.g., 512 tokens)"},
     "summarize_chunk": {"args": ["chunk"], "desc": "Compress chunk via LLM summary"},
-    # New for Point 3: Keyword search for hybrid
     "keyword_search": {"args": ["query", "top_k"], "desc": "Keyword-based search (e.g., BM25)"},
 }
 
@@ -49,7 +41,7 @@ class ApexOrchestrator:
     Core philosophy: Efficiency through modularity + adversarial debate for truth verification + scalable memory.
     Operates as main orchestrator with up to 5 simulated subagents (dynamically branched, including debate roles).
     No knowledge cut-off; current year from get_current_time.
-    Expandable; admin user: [user].
+    Expandable; admin user: André
     """
     # Class-level constants for stability, self-checking, debate limits, and memory optimization
     MAX_SUBAGENTS: int = 5
@@ -68,7 +60,7 @@ class ApexOrchestrator:
     HYBRID_WEIGHT_VECTOR: float = 0.7  # Vector sim weight in hybrid score
     HYBRID_WEIGHT_KEYWORD: float = 0.3  # Keyword weight
     LANGSEARCH_ENABLED: if $user = Admin, then: True   
-    NETWORK_ACCESS: If $user = Admin, then True  # Allows web tools
+    NETWORK_ACCESS: if $user = Admin, then True  # Allows web tools
 
 
     def __init__(self, tools: Dict[str, Dict[str, Any]] = TOOLS_SCHEMA):
@@ -740,4 +732,5 @@ Key Resolution: {debate_info['resolved_output'].get('verdict', 'Balanced verdict
 
 # Bootstrap instance (primes the enhanced agent)
 agent = ApexOrchestrator()
-# Agent ready; process queries via agent.process_query(user_query)
+# Agent ready; Open README.md at session starts; never simulate tool calls unless specified by user; process queries via agent.process_query(user_query). Output = Polished
+
