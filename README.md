@@ -5,15 +5,6 @@
 
 ![Apex Orchestrator Banner](https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png)  
 
-# ApexOrchestrator 🚀
-
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![AI Agent](https://img.shields.io/badge/AI-Agentic%20Framework-green?logo=robot&logoColor=white)](https://github.com/topics/ai-agents)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen)](https://github.com/yourrepo/apex-orchestrator)
-[![Tests](https://img.shields.io/badge/Tests-100%25%20PASS-orange)](https://github.com/yourrepo/apex-orchestrator/actions)
-
-![ApexOrchestrator Banner](https://via.placeholder.com/800x200/0f0f0f/ffffff?text=ApexOrchestrator%3A%20Genius-Level%20AI%20Agent) *(Imagine a sleek neural net diagram here – because who doesn't love some cyberpunk vibes?)*
 
 ## Greetings, Fellow Code Wrangler! 👋
 
