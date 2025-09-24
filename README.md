@@ -1,4 +1,4 @@
-# Apex Orchestrator: AI-Powered Chat Agent for Raspberry Pi 5
+# Apex Orchestrator: xAI-Powered Chat Agent for Raspberry Pi 5
 
 
 [![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)  [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=Streamlit&logoColor=white)](https://streamlit.io/)  [![xAI Powered](https://img.shields.io/badge/Powered%20by-xAI-000000?style=flat&logo=groq&logoColor=white)](https://x.ai/)  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  [![Stars](https://img.shields.io/github/stars/yourusername/apex-orchestrator?style=social)](https://github.com/yourusername/apex-orchestrator)  
