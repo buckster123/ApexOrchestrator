@@ -73,7 +73,7 @@ flowchart LR
 graph LR
     GG[Insert: Chunk Text → Summarize → Embed] --> HH[Vector Store: ANN Index ]
     HH --> II[LRU Cache: Active Entries + Timestamps]
-    II --> JJ[Hierarchy: Tags/Domains for O(1) Filter]
+    II --> JJ[Hierarchy: Tags/Domains for O1 Filter]
     KK[Retrieve: Query Embed → Hybrid Search (Vector 70% + Keyword 30%)] --> LL[Rerank: Salience * Score → Top-K]
     LL --> MM[Lazy Load: From Overflow if Pruned]
     NN[Prune: Salience <0.3 OR Size >1MB OR LRU Evict] --> OO[Decay: 0.95^days] --> PP[Overflow to FS if Medium Salience]
