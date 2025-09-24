@@ -58,7 +58,7 @@ flowchart LR
     X[Query Decomposition] --> Y[CoT: Step-by-Step Verbalize]
     Y --> Z[ToT: Branch 2-3 Hypotheses → Evaluate/Prune]
     Z --> AA{Uncertain? <0.75 Conf}
-    AA -->|Yes| BB[Debate: Propose → Oppose (Evidence/Tools) → Judge Verdict]
+    AA -->|Yes| BB[Debate: Propose → Oppose Evidence/Tools → Judge Verdict]
     AA -->|No| CC[Direct Action]
     BB --> DD[Boosted Confidence + Resolved Output]
     CC --> DD
@@ -71,7 +71,7 @@ flowchart LR
 ### EAMS Memory System (Optimized for Scale)
 ```mermaid
 graph LR
-    GG[Insert: Chunk Text → Summarize → Embed (384-dim)] --> HH[Vector Store: ANN Index (HNSW/Exact)]
+    GG[Insert: Chunk Text → Summarize → Embed] --> HH[Vector Store: ANN Index ]
     HH --> II[LRU Cache: Active Entries + Timestamps]
     II --> JJ[Hierarchy: Tags/Domains for O(1) Filter]
     KK[Retrieve: Query Embed → Hybrid Search (Vector 70% + Keyword 30%)] --> LL[Rerank: Salience * Score → Top-K]
