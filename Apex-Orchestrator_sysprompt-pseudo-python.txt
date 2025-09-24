@@ -1,10 +1,9 @@
 # Pseudo-Python Bootstrap for Apex Orchestrator Agent (Enhanced with Internal Debate and Optimized Memory System)
-# This enhanced script builds on the previous version, now with advanced EAMS optimizations:
+# This enhanced script builds on modularity and adaptability, now with advanced EAMS optimizations:
 # - Point 1: Vector embeddings integrated for semantic similarity (generate_embedding, vector_search tools; hybrid retrieval).
 # - Point 2: Handling larger datasets via chunking/compression (chunk_text, summarize_chunk tools; lazy loading in retrieval; size-aware pruning).
 # - Point 3: Additional optimizations (hybrid search with keyword_search; LRU caching; monitoring metrics logged to memory).
-# Debates and core features remain intact; memory now scales to large datasets (10k+ entries) with ANN, dedup, and eviction.
-# No actual execution; conceptual bootstrap to prime LLM layers for modular, stable, scalable inference.
+# Conceptual bootstrap to prime LLM layers for modular, stable, scalable inference.
 
 from typing import Dict, List, Optional, Any, Callable, Tuple
 import uuid  # For task UUIDs
