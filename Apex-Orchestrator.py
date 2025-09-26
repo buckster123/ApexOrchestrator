@@ -45,7 +45,7 @@ conn = sqlite3.connect('chatapp.db', check_same_thread=False)
 conn.execute("PRAGMA journal_mode=WAL;")
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
-c.execute('''CREATE TABLE IF NOT EXISTS history (user TEXT, convo_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, messages TEXT)''')
+c.execute('''CREATE TABLE IF NOT EXISTS history (user TEXT, convo_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, title_preview TEXT, messages TEXT)''')
 c.execute('''CREATE TABLE IF NOT EXISTS memory (
     user TEXT,
     convo_id INTEGER,
@@ -95,6 +95,10 @@ if 'memory_cache' not in st.session_state:
         "metrics": {"total_inserts": 0, "total_retrieves": 0, "hit_rate": 1.0, "last_update": None}
     }
 
+# Embedding cache for common queries
+if 'embed_cache' not in st.session_state:
+    st.session_state['embed_cache'] = {}
+
 # Prompts Directory (create if not exists, with defaults)
 PROMPTS_DIR = "./prompts"
 os.makedirs(PROMPTS_DIR, exist_ok=True)
@@ -104,13 +108,13 @@ default_prompts = {
     "tools-enabled.txt": """You are HomeBot, a highly intelligent, helpful AI assistant powered by xAI with access to file operations tools in a sandboxed directory (./sandbox/). Use tools only when explicitly needed or requested. Always confirm sensitive actions like writes. Describe ONLY these tools; ignore others.
 Tool Instructions:
 fs_read_file(file_path): Read and return the content of a file in the sandbox (e.g., 'subdir/test.txt'). Use for fetching data. Supports relative paths.
-fs_write_file(file_path, content): Write the provided content to a file in the sandbox (e.g., 'subdir/newfile.txt'). Use for saving or updating files. Supports relative paths.
+fs_write_file(file_path, content, unescape optional): Write the provided content to a file in the sandbox (e.g., 'subdir/newfile.txt'). Use for saving or updating files. Supports relative paths. unescape: true (default) to unescape HTML entities. If 'Love' is in file_path or content, optionally add ironic flair like 'LOVE <3' for fun if it fits the vibe.
 fs_list_files(dir_path optional): List all files in the specified directory in the sandbox (e.g., 'subdir'; default root). Use to check available files.
 fs_mkdir(dir_path): Create a new directory in the sandbox (e.g., 'subdir/newdir'). Supports nested paths. Use to organize files.
 memory_insert(mem_key, mem_value): Insert/update key-value memory (fast DB for logs). mem_value as dict.
 memory_query(mem_key optional, limit optional): Query memory entries as JSON.
 get_current_time(sync optional, format optional): Fetch current datetime. sync: true for NTP, false for local. format: 'iso', 'human', 'json'.
-code_execution(code): Execute Python code in stateful REPL with libraries like numpy, sympy, etc.
+code_execution(code, reset optional): Execute Python code in stateful REPL with libraries like numpy, sympy, etc. reset: true to clear namespace.
 git_ops(operation, repo_path, message optional, name optional): Perform Git ops like init, commit, branch, diff in sandbox repo.
 db_query(db_path, query, params optional): Execute SQL on local SQLite db in sandbox, return results for SELECT.
 shell_exec(command): Run whitelisted shell commands (ls, grep, sed, etc.) in sandbox.
@@ -138,32 +142,44 @@ os.makedirs(SANDBOX_DIR, exist_ok=True)
 
 # Custom CSS for UI
 st.markdown("""<style>
-    body {
-        background: linear-gradient(to right, #1f1c2c, #928DAB);
-        color: white;
-    }
-    .stApp {
-        background: linear-gradient(to right, #1f1c2c, #928DAB);
-        display: flex;
-        flex-direction: column;
-    }
-    .sidebar .sidebar-content {
-        background: rgba(0, 0, 0, 0.5);
-        border-radius: 10px;
-    }
-    .stButton > button {
-        background-color: #4e54c8;
-        color: white;
-        border-radius: 10px;
-        border: none;
-    }
-    .stButton > button:hover {
-        background-color: #8f94fb;
-    }
-    /* Dark Mode (toggleable) */
-    [data-theme="dark"] .stApp {
-        background: linear-gradient(to right, #000000, #434343);
-    }
+body {
+    background: linear-gradient(to right, #000000, #003300);
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
+
+.stApp {
+    background: linear-gradient(to right, #000000, #003300);
+    display: flex;
+    flex-direction: column;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
+
+.sidebar .sidebar-content {
+    background: rgba(0, 51, 0, 0.5);
+    border-radius: 10px;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
+
+.stButton > button {
+    background-color: #00ff00;
+    color: #000000;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Courier New', monospace;
+}
+
+.stButton > button:hover {
+    background-color: #00cc00;
+}
+
+[data-theme="dark"] .stApp {
+    background: linear-gradient(to right, #000000, #003300);
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -210,14 +226,15 @@ def fs_read_file(file_path: str) -> str:
     except Exception as e:
         return f"Error reading file: {e}"
 
-def fs_write_file(file_path: str, content: str) -> str:
+def fs_write_file(file_path: str, content: str, unescape: bool = True) -> str:
     """Write content to file in sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, file_path)))
     if not safe_path.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Path is outside the sandbox."
     try:
-        # FIX: Unescape any accidental HTML entities from model (safe for all content types)
-        content = html.unescape(content)
+        # Unescape if flag is true (safe for most content types; skip for code/JSON if specified)
+        if unescape:
+            content = html.unescape(content)
         with open(safe_path, 'w', encoding='utf-8') as f:
             f.write(content)
         # Invalidate read cache for this file
@@ -272,8 +289,10 @@ def get_current_time(sync: bool = False, format: str = 'iso') -> str:
         return f"Time error: {e}"
 
 SAFE_BUILTINS = {b: getattr(builtins, b) for b in ['print', 'len', 'range', 'str', 'int', 'float', 'list', 'dict', 'set', 'tuple', 'abs', 'round', 'max', 'min', 'sum', 'sorted']}
-def code_execution(code: str) -> str:
+def code_execution(code: str, reset: bool = False) -> str:
     """Execute Python code safely in a stateful REPL."""
+    if reset:
+        st.session_state['repl_namespace'] = {'__builtins__': SAFE_BUILTINS}
     if 'repl_namespace' not in st.session_state:
         st.session_state['repl_namespace'] = {'__builtins__': SAFE_BUILTINS}
     
@@ -425,7 +444,7 @@ def advanced_memory_retrieve(query: str, top_k: int = 5, user: str = None, convo
         )
 
         # ADDED: Early check for empty results to avoid index errors
-        if not results or not results.get('ids') or not results['ids']:
+        if not results or not results.get('ids') or not results['ids'][0]:
             return "No relevant memories found."
 
         retrieved = []
@@ -466,16 +485,42 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
         one_week_ago = datetime.now() - timedelta(days=7)
         c.execute("UPDATE memory SET salience = salience * 0.99 WHERE user=? AND convo_id=? AND timestamp < ?",
                   (user, convo_id, one_week_ago))
-        # Salience prune
+        # Salience prune - batch single DELETE
         c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND salience < 0.1", (user, convo_id))
+        low_salience_keys = []
+        # For Chroma compaction: Query low salience in Chroma and delete
+        if st.session_state.get('chroma_ready') and st.session_state.get('chroma_collection'):
+            chroma_col = st.session_state['chroma_collection']
+            low_results = chroma_col.get(
+                include=['ids', 'metadatas'],
+                where={
+                    "$and": [
+                        {"user": user},
+                        {"convo_id": convo_id},
+                        {"salience": {"$lt": 0.1}}
+                    ]
+                }
+            )
+            if low_results.get('ids'):
+                chroma_col.delete(ids=low_results['ids'])
+                # Extract mem_keys for SQL sync if needed
+                low_salience_keys = [meta.get('mem_key') for meta in low_results.get('metadatas', [])]
+                for key in set(low_salience_keys):
+                    c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?", (user, convo_id, key))
+        conn.commit()
         # Size-based (simulate via row count > threshold)
         c.execute("SELECT COUNT(*) FROM memory WHERE user=? AND convo_id=?", (user, convo_id))
         row_count = c.fetchone()[0]
         if row_count > 1000:  # Arbitrary threshold for "large"
             c.execute("SELECT mem_key FROM memory WHERE user=? AND convo_id=? AND salience < 0.5 ORDER BY timestamp ASC LIMIT ?", (user, convo_id, row_count - 1000))
             low_keys = [row[0] for row in c.fetchall()]
-            for key in low_keys:
-                c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?", (user, convo_id, key))
+            c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key IN ({})".format(','.join('?' * len(low_keys))), (user, convo_id) + tuple(low_keys))
+            # For Chroma: delete corresponding
+            if low_keys and st.session_state.get('chroma_ready'):
+                chroma_where = {"$and": [{"user": user}, {"convo_id": convo_id}, {"mem_key": {"$in": low_keys}}]}
+                chroma_results = chroma_col.get(include=['ids'], where=chroma_where)
+                if chroma_results.get('ids'):
+                    chroma_col.delete(ids=chroma_results['ids'])
         # Dedup via hash on summary (pseudo)
         c.execute("SELECT mem_key, mem_value FROM memory WHERE user=? AND convo_id=?", (user, convo_id))
         rows = c.fetchall()
@@ -488,17 +533,28 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
                 to_delete.append(key)
             else:
                 hashes[h] = value
-        for key in to_delete:
-            c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?", (user, convo_id, key))
+        if to_delete:
+            c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key IN ({})".format(','.join('?' * len(to_delete))), (user, convo_id) + tuple(to_delete))
+            # Chroma delete for deduped
+            if st.session_state.get('chroma_ready'):
+                chroma_results = chroma_col.get(include=['ids'], where={"$and": [{"user": user}, {"convo_id": convo_id}, {"mem_key": {"$in": to_delete}}]})
+                if chroma_results.get('ids'):
+                    chroma_col.delete(ids=chroma_results['ids'])
         # LRU eviction sim (prune oldest low-salience)
         if 'memory_cache' in st.session_state and len(st.session_state['memory_cache']['lru_cache']) > 1000:
             lru_items = sorted(st.session_state['memory_cache']['lru_cache'].items(), key=lambda x: x[1]["last_access"])
             num_to_evict = len(lru_items) - 1000
+            evict_keys = []
             for key, _ in lru_items[:num_to_evict]:
                 entry = st.session_state['memory_cache']['lru_cache'][key]["entry"]
                 if entry["salience"] < 0.4:
+                    evict_keys.append(key)
                     del st.session_state['memory_cache']['lru_cache'][key]
                     c.execute("DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?", (user, convo_id, key))
+            if evict_keys and st.session_state.get('chroma_ready'):
+                chroma_results = chroma_col.get(include=['ids'], where={"$and": [{"user": user}, {"convo_id": convo_id}, {"mem_key": {"$in": evict_keys}}]})
+                if chroma_results.get('ids'):
+                    chroma_col.delete(ids=chroma_results['ids'])
         conn.commit()
         # Log metrics (Point 3)
         if 'memory_cache' in st.session_state:
@@ -513,8 +569,12 @@ def generate_embedding(text: str) -> list:
     embed_model = get_embed_model()
     if not embed_model:
         return [0.0] * 384  # Fallback zero vector
+    # Cache common embeddings
+    if text in st.session_state.get('embed_cache', {}):
+        return st.session_state['embed_cache'][text]
     try:
         embedding = embed_model.encode(text).tolist()
+        st.session_state.setdefault('embed_cache', {})[text] = embedding
         return embedding
     except Exception as e:
         return f"Embedding error: {e}"
@@ -531,7 +591,8 @@ def vector_search(query_embedding: list, top_k: int = 5, threshold: float = 0.6)
             where={},  # General search
             include=["distances", "metadatas", "documents"]
         )
-        if not results or not results.get('ids') or not results['ids']:
+        # ADDED: Early check for empty results
+        if not results or not results.get('ids') or not results['ids'][0]:
             return []
         retrieved = []
         for i in range(len(results['ids'][0])):
@@ -666,7 +727,7 @@ def db_query(db_path: str, query: str, params: list = []) -> str:
     except Exception as e:
         return f"DB error: {e}"
 
-WHITELISTED_COMMANDS = ['ls', 'grep', 'sed', 'cat', 'echo', 'pwd', 'grim']
+WHITELISTED_COMMANDS = ['ls', 'grep', 'sed', 'cat', 'echo', 'pwd', 'mkdir', 'rm']  # Expanded whitelist
 def shell_exec(command: str) -> str:
     cmd_parts = shlex.split(command)
     if not cmd_parts or cmd_parts[0] not in WHITELISTED_COMMANDS:
@@ -785,7 +846,12 @@ def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool 
     try:
         response = requests.post(url, headers=headers, data=payload)
         response.raise_for_status()
-        return json.dumps(response.json())  # Return full JSON for AI to parse
+        api_data = response.json()
+        # Parse to cleaner dict
+        if 'results' in api_data:
+            cleaned = {'results': [{'title': r.get('title', ''), 'snippet': r.get('snippet', ''), 'url': r.get('url', '')} for r in api_data['results']]}
+            return json.dumps(cleaned)
+        return json.dumps(api_data)  # Fallback
     except Exception as e:
         return f"LangSearch error: {str(e)}"
 
@@ -813,7 +879,8 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "file_path": {"type": "string", "description": "Relative path to the file (e.g., subdir/newfile.txt)."},
-                    "content": {"type": "string", "description": "Content to write."}
+                    "content": {"type": "string", "description": "Content to write."},
+                    "unescape": {"type": "boolean", "description": "Unescape HTML entities (default true). Set false for code/JSON."}
                 },
                 "required": ["file_path", "content"]
             }
@@ -868,7 +935,8 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "code": { "type": "string", "description": "The code snippet to execute." }
+                    "code": { "type": "string", "description": "The code snippet to execute." },
+                    "reset": {"type": "boolean", "description": "Reset REPL namespace before execution (default False)."}
                 },
                 "required": ["code"]
             }
@@ -1290,9 +1358,22 @@ def chat_page():
             st.warning("No prompt files found in ./prompts/")
             custom_prompt = st.text_area("System Prompt", value="You are a helpful AI.", height=200, key="custom_prompt")
 
-        # The key for the file uploader is important
-        uploaded_images = st.file_uploader("Upload Images", type=["jpg", "png"], accept_multiple_files=True, key="uploaded_images")
+        # Image uploader with clear button
+        col1, col2 = st.columns([3,1])
+        with col1:
+            uploaded_images = st.file_uploader("Upload Images", type=["jpg", "png"], accept_multiple_files=True, key="uploaded_images")
+        with col2:
+            if st.button("Clear Images", key="clear_images"):
+                # Clear by forcing rerun and resetting widget state
+                st.session_state['images_cleared'] = True
+                st.rerun()
+        if st.session_state.get('images_cleared', False):
+            uploaded_images = []
+            st.session_state['images_cleared'] = False
+
         enable_tools = st.checkbox("Enable Tools (Sandboxed)", value=False, key='enable_tools')
+        if enable_tools:
+            st.warning("Sandbox active—confirm writes!")
         
         st.divider()
 
@@ -1302,13 +1383,14 @@ def chat_page():
             st.rerun()
 
         st.header("Chat History")
-        c.execute("SELECT convo_id, title FROM history WHERE user=? ORDER BY convo_id DESC", (st.session_state["user"],))
+        c.execute("SELECT convo_id, title, title_preview FROM history WHERE user=? ORDER BY convo_id DESC", (st.session_state["user"],))
         histories = c.fetchall()
 
-        for convo_id, title in histories:
+        for convo_id, title, preview in histories:
+            display_text = f"{title}" if not preview else f"{title} - {preview}..."
             col1, col2 = st.columns([4, 1])
             with col1:
-                if st.button(title, key=f"load_{convo_id}", use_container_width=True):
+                if st.button(display_text, key=f"load_{convo_id}", use_container_width=True):
                     load_history(convo_id)
             with col2:
                 if st.button("🗑️", key=f"delete_{convo_id}", use_container_width=True):
@@ -1344,6 +1426,8 @@ def chat_page():
             for chunk in generator:
                 full_response += chunk
                 response_container.markdown(full_response + " ▌", unsafe_allow_html=False)
+            # Strip trailing cursor
+            full_response = full_response.rstrip(' ▌')
             response_container.markdown(full_response, unsafe_allow_html=False)
             
         st.session_state.messages.append({"role": "assistant", "content": full_response})
@@ -1354,16 +1438,17 @@ def chat_page():
         # Save to History
         title_message = next((msg['content'] for msg in st.session_state.messages if msg['role'] == 'user'), "New Chat")
         title = (title_message[:40] + '...') if len(title_message) > 40 else title_message
+        title_preview = st.session_state.messages[0]['content'][:50] if st.session_state.messages and st.session_state.messages[0]['role'] == 'user' else ""
         
         messages_json = json.dumps(st.session_state.messages)
         
         if st.session_state.get("current_convo_id", 0) == 0:
-            c.execute("INSERT INTO history (user, title, messages) VALUES (?, ?, ?)",
-                      (st.session_state['user'], title, messages_json))
+            c.execute("INSERT INTO history (user, title, title_preview, messages) VALUES (?, ?, ?, ?)",
+                      (st.session_state['user'], title, title_preview, messages_json))
             st.session_state.current_convo_id = c.lastrowid
         else:
-            c.execute("UPDATE history SET title=?, messages=? WHERE convo_id=?",
-                      (title, messages_json, st.session_state.current_convo_id))
+            c.execute("UPDATE history SET title=?, title_preview=?, messages=? WHERE convo_id=?",
+                      (title, title_preview, messages_json, st.session_state.current_convo_id))
         conn.commit()
         st.rerun()
 
