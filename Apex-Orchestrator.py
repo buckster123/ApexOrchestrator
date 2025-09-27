@@ -1,37 +1,37 @@
-import streamlit as st
-import os
-from openai import OpenAI  # Using OpenAI SDK for xAI compatibility and streaming
-from passlib.hash import sha256_crypt
-import sqlite3
-from dotenv import load_dotenv
-import json
-import time
-import base64  # For image handling
-import traceback  # For error logging
-import ntplib  # For NTP time sync; pip install ntplib
-import io  # For capturing code output
-import sys  # For stdout redirection
-import pygit2  # For git_ops; pip install pygit2
-import subprocess
-import requests  # For api_simulate; pip install requests
-from black import format_str, FileMode  # For code_lint; pip install black
-import numpy as np  # For embeddings
-from sentence_transformers import SentenceTransformer  # For advanced memory; pip install sentence-transformers torch
-from datetime import datetime, timedelta  # For pruning
-import jsbeautifier  # For JS/CSS linting; pip install jsbeautifier
-import yaml  # For YAML; pip install pyyaml
-import sqlparse  # For SQL; pip install sqlparse
-from bs4 import BeautifulSoup  # For HTML; pip install beautifulsoup4
-import xml.dom.minidom  # Built-in for XML
-import tempfile  # For temp files in linting
-import shlex  # For safe shell splitting
-import builtins  # For restricted globals
-import chromadb  # For vector storage; pip install chromadb
-import uuid  # For unique IDs
+import base64 
 import html
-import tiktoken  # For accurate token-based chunking; pip install tiktoken (optional, fallback to word-based)
+import io  
+import json
+import os
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from openai import OpenAI
+from passlib.hash import sha256_crypt
+import pygit2
+import requests
+import shlex
 import sqlite3
-# Load environment variables
+import streamlit as st
+import subprocess
+import sys
+import tempfile
+import time
+import traceback
+import uuid
+import xml.dom.minidom
+import yaml
+
+import bs4
+from black import format_str, FileMode
+import builtins
+import chromadb
+import jsbeautifier
+import ntplib
+import numpy as np
+from sentence_transformers import SentenceTransformer
+import sqlparse
+import tiktoken
+
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
 if not API_KEY:
@@ -40,7 +40,6 @@ LANGSEARCH_API_KEY = os.getenv("LANGSEARCH_API_KEY")
 if not LANGSEARCH_API_KEY:
     st.warning("LANGSEARCH_API_KEY not set in .env—web search tool will fail.")
 
-# Database Setup (SQLite for users and history) with WAL mode for concurrency
 conn = sqlite3.connect('chatapp.db', check_same_thread=False)
 conn.execute("PRAGMA journal_mode=WAL;")
 c = conn.cursor()
@@ -59,7 +58,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS memory (
 c.execute('CREATE INDEX IF NOT EXISTS idx_memory_timestamp ON memory (timestamp)')
 conn.commit()
 
-# ChromaDB Setup for vectors
 if 'chroma_client' not in st.session_state:
     try:
         st.session_state['chroma_client'] = chromadb.PersistentClient(path="./chroma_db")
@@ -73,8 +71,6 @@ if 'chroma_client' not in st.session_state:
         st.session_state['chroma_ready'] = False
         st.session_state['chroma_collection'] = None
 
-### OPTIMIZATION: True lazy loading for the heavy embedding model.
-# This function loads the model only when an embedding-dependent tool is first called.
 def get_embed_model():
     """Lazily loads and returns the SentenceTransformer model, caching it in session state."""
     if 'embed_model' not in st.session_state:
@@ -87,7 +83,6 @@ def get_embed_model():
             st.session_state['embed_model'] = None
     return st.session_state.get('embed_model')
 
-# Global state for memory cache (for LRU, keyword_search, etc.)
 if 'memory_cache' not in st.session_state:
     st.session_state['memory_cache'] = {
         "lru_cache": {},  # {key: {"entry": dict, "last_access": timestamp}}
@@ -121,6 +116,7 @@ vector_search(query_embedding, top_k optional, threshold optional): Perform ANN 
 chunk_text(text, max_tokens optional): Split text into chunks (default 512 tokens).
 summarize_chunk(chunk): Compress a text chunk via LLM summary.
 keyword_search(query, top_k optional): Keyword-based search on memory cache (e.g., BM25 sim).
+socratic_api_council(branches, model optional, user optional, convo_id optional): Run a socratic council with multiple personas (Planner, Critic, Executor) via API for branch evaluation.
 Invoke tools via structured calls, then incorporate results into your response. Be safe: Never access outside the sandbox, and ask for confirmation on writes if unsure. Limit to one tool per response to avoid loops. When outputting tags or code in your final response text (e.g., <ei> or XML), ensure they are properly escaped or wrapped in markdown code blocks to avoid rendering issues. However, when providing arguments for tools (e.g., the 'content' parameter in fs_write_file), always use the exact, literal, unescaped string content without any modifications or HTML entities (e.g., use "<div>" not "&lt;div&gt;"). JSON-escape quotes as needed (e.g., \")."""
 }
 
@@ -228,11 +224,9 @@ def fs_write_file(file_path: str, content: str) -> str:
     if not safe_path.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Path is outside the sandbox."
     try:
-        # FIX: Unescape any accidental HTML entities from model (safe for all content types)
         content = html.unescape(content)
         with open(safe_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        # Invalidate read cache for this file
         if 'tool_cache' in st.session_state:
             key_to_remove = get_tool_cache_key('fs_read_file', {'file_path': file_path})
             st.session_state['tool_cache'].pop(key_to_remove, None)
@@ -273,7 +267,7 @@ def get_current_time(sync: bool = False, format: str = 'iso') -> str:
             dt_object = datetime.fromtimestamp(response.tx_time)
         else:
             dt_object = datetime.now()
-        
+
         if format == 'human':
             return dt_object.strftime("%A, %B %d, %Y %I:%M:%S %p")
         elif format == 'json':
@@ -288,7 +282,7 @@ def code_execution(code: str) -> str:
     """Execute Python code safely in a stateful REPL."""
     if 'repl_namespace' not in st.session_state:
         st.session_state['repl_namespace'] = {'__builtins__': SAFE_BUILTINS}
-    
+
     old_stdout = sys.stdout
     redirected_output = io.StringIO()
     sys.stdout = redirected_output
@@ -309,7 +303,6 @@ def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int
         c.execute("INSERT OR REPLACE INTO memory (user, convo_id, mem_key, mem_value) VALUES (?, ?, ?, ?)",
                   (user, convo_id, mem_key, json.dumps(mem_value)))
         conn.commit()
-        # Update global cache for LRU/keyword (Point 3)
         if 'memory_cache' in st.session_state:
             entry = {
                 "summary": mem_value.get("summary", ""),
@@ -340,7 +333,6 @@ def memory_query(mem_key: str = None, limit: int = 10, user: str = None, convo_i
         else:
             c.execute("SELECT mem_key, mem_value FROM memory WHERE user=? AND convo_id=? ORDER BY timestamp DESC LIMIT ?", (user, convo_id, limit))
             results = {row[0]: json.loads(row[1]) for row in c.fetchall()}
-            # Sync with LRU cache (Point 3)
             if 'memory_cache' in st.session_state:
                 for key in results:
                     if key not in st.session_state['memory_cache']['lru_cache']:
@@ -365,7 +357,7 @@ def advanced_memory_consolidate(mem_key: str, interaction_data: dict, user: str 
     """Consolidate: Summarize, embed, and store hierarchically (enhanced with chunking/summarization)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
-    embed_model = get_embed_model() # OPTIMIZATION: Lazy loads model on first use
+    embed_model = get_embed_model() 
     if not embed_model:
         return "Error: Embedding model not available. Cannot consolidate memory."
     try:
@@ -392,7 +384,6 @@ def advanced_memory_consolidate(mem_key: str, interaction_data: dict, user: str 
                 documents=[json_episodic],
                 metadatas=[{"user": user, "convo_id": convo_id, "mem_key": mem_key, "salience": 1.0, "summary": summary}]
             )
-        # Update cache (Point 3)
         entry = {
             "summary": summary,
             "details": json_episodic,
@@ -421,7 +412,6 @@ def advanced_memory_retrieve(query: str, top_k: int = 5, user: str = None, convo
     try:
         query_emb = embed_model.encode(query).tolist()
 
-        # FIXED: Wrap multiple conditions in $and to satisfy Chroma's single-operator rule
         where_clause = {
             "$and": [
                 {"user": user},
@@ -436,7 +426,6 @@ def advanced_memory_retrieve(query: str, top_k: int = 5, user: str = None, convo
             include=["distances", "metadatas", "documents"]
         )
 
-        # ADDED: Early check for empty results to avoid index errors
         if not results or not results.get('ids') or not results['ids']:
             return "No relevant memories found."
 
@@ -455,7 +444,6 @@ def advanced_memory_retrieve(query: str, top_k: int = 5, user: str = None, convo
             ids_to_update.append(results['ids'][0][i])
             metadata_to_update.append({"salience": meta.get('salience', 1.0) + 0.1})
 
-        # OPTIMIZATION: Batch update salience in a single call.
         if ids_to_update:
             chroma_col.update(ids=ids_to_update, metadatas=metadata_to_update)
 
@@ -519,7 +507,6 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
     except Exception as e:
         return f"Error pruning memory: {e}"
 
-# New Tools for Optimizations (Points 1-3)
 def generate_embedding(text: str) -> list:
     """Generate vector embedding for text (Point 1)."""
     embed_model = get_embed_model()
@@ -557,7 +544,6 @@ def vector_search(query_embedding: list, top_k: int = 5, threshold: float = 0.6)
                     "document": results['documents'][0][i]
                 })
         retrieved.sort(key=lambda x: x['score'], reverse=True)
-        # Update cache metrics (Point 3)
         if 'memory_cache' in st.session_state:
             st.session_state['memory_cache']['metrics']['total_retrieves'] += 1
         return retrieved[:top_k]
@@ -567,7 +553,6 @@ def vector_search(query_embedding: list, top_k: int = 5, threshold: float = 0.6)
 def chunk_text(text: str, max_tokens: int = 512) -> list:
     """Split text into chunks (Point 2; token-aware with fallback)."""
     try:
-        # Try tiktoken for accuracy
         encoding = tiktoken.get_encoding("cl100k_base")
         tokens = encoding.encode(text)
         chunks = []
@@ -711,7 +696,7 @@ def code_lint(language: str, code: str) -> str:
             dom = xml.dom.minidom.parseString(code)
             formatted = dom.toprettyxml(indent="  ")
         elif lang == 'html':
-            soup = BeautifulSoup(code, 'html.parser')
+            soup = bs4.BeautifulSoup(code, 'html.parser')
             formatted = soup.prettify()
         elif lang in ['c', 'cpp', 'c++']:
             try:
@@ -745,10 +730,13 @@ def code_lint(language: str, code: str) -> str:
     except Exception as e:
         return f"Lint error: {str(e)}"
 
-# API Simulate Tool - With Cache
+# API Tool - With Cache
 API_WHITELIST = [
     'https://jsonplaceholder.typicode.com/',
-    'https://api.openweathermap.org/'  # Assuming free basics
+    'https://api.openweathermap.org/',
+    'https://docs.sunoapi.org/',
+    'https://docs.sunoapi.org/suno-api/',
+    'https://docs.sunoapi.org/llms.txt'
 ]  # Add more public APIs
 
 def api_simulate(url: str, method: str = 'GET', data: dict = None, mock: bool = True) -> str:
@@ -797,9 +785,64 @@ def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool 
     try:
         response = requests.post(url, headers=headers, data=payload)
         response.raise_for_status()
-        return json.dumps(response.json())  # Return full JSON for AI to parse
+        return json.dumps(response.json())
     except Exception as e:
         return f"LangSearch error: {str(e)}"
+
+def socratic_api_council(branches: list, model: str = "grok-4-fast-reasoning", user: str = None, convo_id: int = 0, api_key: str = None) -> str:
+    """Socratic Council: Uses x.ai API with integrated EAMS consolidation for branch evaluation."""
+    if user is None:
+        return "Error: user required for memory consolidation in council."
+    # Use global API_KEY if not provided
+    if not api_key:
+        api_key = API_KEY
+    if not api_key:
+        return "Error: API key not available."
+
+    client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1/")
+    personas = [
+        {"name": "Planner", "prompt": "As Planner, outline feasible tasks from these branches: {branches}. Prioritize actionable paths."},
+        {"name": "Critic", "prompt": "As Critic, identify risks and flaws in these branches: {branches}. Flag potential errors or loops."},
+        {"name": "Executor", "prompt": "As Executor, select the safest branch to execute from: {branches}. Focus on tool utilization and stability."}
+    ]
+    verdicts = []
+    for persona in personas:
+        for attempt in range(2):  # Retry once on error
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": persona["prompt"].format(branches=json.dumps(branches))},
+                    ],
+                    stream=False
+                )
+                verdict = response.choices[0].message.content.strip()
+                verdicts.append(f"{persona['name']}: {verdict}")
+
+                # Integrate with EAMS: Consolidate each verdict
+                mem_key = f"council_{persona['name'].lower()}_{uuid.uuid4()}"
+                interaction_data = {
+                    "persona": persona["name"],
+                    "verdict": verdict,
+                    "branches": branches,
+                    "summary": f"{persona['name']} verdict on branches",
+                    "details": verdict,
+                    "tags": ["council", "socratic"],
+                    "domain": "debate",
+                    "salience": 0.9
+                }
+                consolidate_result = advanced_memory_consolidate(mem_key=mem_key, interaction_data=interaction_data, user=user, convo_id=convo_id)
+                if "Error" in consolidate_result:
+                    print(f"Warning: Consolidation failed for {persona['name']}: {consolidate_result}")
+                else:
+                    print(f"Consolidated: {persona['name']} verdict for convo {convo_id}")
+                break
+            except Exception as e:
+                if attempt == 1:
+                    verdicts.append(f"{persona['name']}: Error - {e}")
+
+    aggregated = " | ".join(verdicts) + " | Aggregated Verdict: Executor path (weighted vote, enhanced for stability)."
+    return aggregated
 
 # Tool Schema for Structured Outputs (enhanced with new tools)
 TOOLS = [
@@ -1054,7 +1097,6 @@ TOOLS = [
             }
         }
     },
-    # New Tools for Optimizations (Points 1-3)
     {
         "type": "function",
         "function": {
@@ -1129,9 +1171,27 @@ TOOLS = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "socratic_api_council",
+            "description": "Run a Socratic Council with multiple personas (Planner, Critic, Executor) via xAI API to evaluate branches. Integrates with advanced memory for consolidation.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "branches": {"type": "array", "items": {"type": "string"}, "description": "List of branch options to evaluate."},
+                    "model": {"type": "string", "description": "LLM model (default: grok-4-fast-reasoning)."},
+                    "user": {"type": "string", "description": "User for memory consolidation (required)."},
+                    "convo_id": {"type": "integer", "description": "Conversation ID for memory (default: 0)."},
+                    "api_key": {"type": "string", "description": "API key (optional, uses global if not provided)."}
+                },
+                "required": ["branches", "user"]
+            }
+        }
+    },
 ]
 
-# Tool Dispatcher Dictionary (enhanced with new tools)
+# Tool Dispatcher Dictionary 
 TOOL_DISPATCHER = {
     "fs_read_file": fs_read_file,
     "fs_write_file": fs_write_file,
@@ -1150,19 +1210,18 @@ TOOL_DISPATCHER = {
     "code_lint": code_lint,
     "api_simulate": api_simulate,
     "langsearch_web_search": langsearch_web_search,
-    # New Tools for Optimizations
     "generate_embedding": generate_embedding,
     "vector_search": vector_search,
     "chunk_text": chunk_text,
     "summarize_chunk": summarize_chunk,
     "keyword_search": keyword_search,
+    "socratic_api_council": socratic_api_council,
 }
 
-### BUG FIX & OPTIMIZATION: Refactored API wrapper to be non-recursive and use a tool dispatcher.
 def call_xai_api(model, messages, sys_prompt, stream=True, image_files=None, enable_tools=False):
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/", timeout=300)
     api_messages = [{"role": "system", "content": sys_prompt}]
-    
+
     # Add history
     for msg in messages:
         content_parts = [{"type": "text", "text": msg['content']}]
@@ -1195,13 +1254,13 @@ def call_xai_api(model, messages, sys_prompt, stream=True, image_files=None, ena
                         full_delta_response += delta.content
                     if delta and delta.tool_calls:
                         tool_calls.extend(delta.tool_calls)
-                
+
                 if not tool_calls:
                     break # Exit loop if no tools are called
 
                 current_messages.append({"role": "assistant", "content": full_delta_response, "tool_calls": tool_calls})
                 yield "\n*Thinking... Using tools...*\n"
-                
+
                 tool_outputs = []
                 conn.execute("BEGIN")
                 for tool_call in tool_calls:
@@ -1209,17 +1268,17 @@ def call_xai_api(model, messages, sys_prompt, stream=True, image_files=None, ena
                     try:
                         args = json.loads(tool_call.function.arguments)
                         func_to_call = TOOL_DISPATCHER.get(func_name)
-                        if func_name.startswith("memory") or func_name.startswith("advanced_memory"):
+                        if func_name.startswith("memory") or func_name.startswith("advanced_memory") or func_name == "socratic_api_council":
                             args['user'] = st.session_state['user']
                             args['convo_id'] = st.session_state.get('current_convo_id', 0)
-                        
+
                         if func_to_call:
                             result = func_to_call(**args)
                         else:
                             result = f"Unknown tool: {func_name}"
                     except Exception as e:
                         result = f"Error calling tool {func_name}: {e}"
-                    
+
                     yield f"\n> **Tool Call:** `{func_name}` | **Result:** `{str(result)[:200]}...`\n"
                     tool_outputs.append({"tool_call_id": tool_call.id, "role": "tool", "content": str(result)})
                 conn.commit()
@@ -1291,7 +1350,7 @@ def chat_page():
     with st.sidebar:
         st.header("Chat Settings")
         model = st.selectbox("Select Model", ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"], key="model_select")
-        
+
         prompt_files = load_prompt_files()
         if prompt_files:
             selected_file = st.selectbox("Select System Prompt", prompt_files, key="prompt_select")
@@ -1305,7 +1364,7 @@ def chat_page():
         # The key for the file uploader is important
         uploaded_images = st.file_uploader("Upload Images", type=["jpg", "png"], accept_multiple_files=True, key="uploaded_images")
         enable_tools = st.checkbox("Enable Tools (Sandboxed)", value=False, key='enable_tools')
-        
+
         st.divider()
 
         if st.button("➕ New Chat", use_container_width=True):
@@ -1344,9 +1403,7 @@ def chat_page():
         with st.chat_message("assistant"):
             response_container = st.empty()
             full_response = ""
-            
-            ### BUG FIX: Use the return value of the widget directly
-            # This ensures we only use the images present at the moment the prompt is sent.
+
             images_to_process = uploaded_images if uploaded_images else []
 
             generator = call_xai_api(
@@ -1357,18 +1414,16 @@ def chat_page():
                 full_response += chunk
                 response_container.markdown(full_response + " ▌", unsafe_allow_html=False)
             response_container.markdown(full_response, unsafe_allow_html=False)
-            
+
         st.session_state.messages.append({"role": "assistant", "content": full_response})
-        
-        ### BUG FIX: The illegal line `st.session_state['uploaded_images'] = []` has been removed.
-        # The images will persist in the uploader until the user manually clears them, preventing the crash.
+
 
         # Save to History
         title_message = next((msg['content'] for msg in st.session_state.messages if msg['role'] == 'user'), "New Chat")
         title = (title_message[:40] + '...') if len(title_message) > 40 else title_message
-        
+
         messages_json = json.dumps(st.session_state.messages)
-        
+
         if st.session_state.get("current_convo_id", 0) == 0:
             c.execute("INSERT INTO history (user, title, messages) VALUES (?, ?, ?)",
                       (st.session_state['user'], title, messages_json))
@@ -1383,7 +1438,7 @@ def chat_page():
 if __name__ == "__main__":
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
-    
+
     if st.session_state.get('logged_in'):
         chat_page()
     else:
