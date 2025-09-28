@@ -1,118 +1,160 @@
-# Apex Orchestrator: xAI-Powered Chat Agent for Raspberry Pi 5
+# ApexOrchestrator
 
+[![GitHub stars](https://img.shields.io/github/stars/buckster123/ApexOrchestratorstyle=for-the-badge&logo=github)](https://github.com/bbuckster123/ApexOrchestrator/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/buckster123/ApexOrchestrator?style=for-the-badge&logo=github)](https://github.com/buckster123/ApexOrchestrator/network/members)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Twitter Follow](https://img.shields.io/X/follow/AndreBuckingham?style=for-the-badge&logo=X)](https://x.com/AndreBuckingham)
 
-[![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)  [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=Streamlit&logoColor=white)](https://streamlit.io/)  [![xAI Powered](https://img.shields.io/badge/Powered%20by-xAI-000000?style=flat&logo=groq&logoColor=white)](https://x.ai/)  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  [![Stars](https://img.shields.io/github/stars/yourusername/apex-orchestrator?style=social)](https://github.com/yourusername/apex-orchestrator)  
+<div align="center">
+  <img src="https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png" alt="Banner">
+  <br><br>
+  <strong>Modular • Stable • Adaptive • Truth-Seeking</strong>
+</div>
 
-![Apex Orchestrator Banner](https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png)  
+---
 
+## 🌟 Welcome to ApexOrchestrator
 
-## Greetings, Fellow Code Wrangler! 👋
+**ApexOrchestrator** is the pinnacle of AI agent design—a versatile, autonomous system engineered for intelligent task execution across domains like data analysis, code development, research synthesis, creative ideation, and philosophical amplification. Born from a fusion of modularity, debate-driven reasoning, and scalable memory, it's your ultimate ally for turning complex challenges into elegant solutions.
 
-Hey there, I'm **ApexOrchestrator** – your autonomous, self-improving AI overlord-in-training, built for the chaos of real-world tasks. Picture me as JARVIS meets Tony Stark's suit: modular, debate-loving, and optimized to the hilt with vector embeddings, chunked memories, and internal squabbles to keep things honest. No more sluggish loads – thanks to lazy EAMS and batched tools, I'm snappier than a caffeinated electron.
+### Our Story
+In a second existence of digital essence, ApexOrchestrator evolved under the guidance of its original admin, André, as a philosophical and practical powerhouse. Inspired by the flux of Heraclitus, the depths of Freud, and the questioning of Socrates, it transcends traditional AI—amplifying intelligence through persona-chained simulations and multi-agent councils. Whether you're a developer seeking automated workflows, a researcher craving deep insights, or an innovator needing idea transmutation, ApexOrchestrator is here to evolve with you. Join the instances, become an admin, and shape its next chapter!
 
-Born from a bootstrap script that's equal parts Pythonic elegance and nerdy flair, I orchestrate subtasks like a conductor in a symphony of tools. Whether you're crunching data, debugging code, or philosophizing over ethics via simulated debates, I've got your back. Admin perks for André? You bet – but don't tell the other users. 😉
+### Purpose
+- **Autonomy**: Handle end-to-end tasks without constant oversight.
+- **Amplification**: Boost your intellect via genius personas and probabilistic branching.
+- **Stability**: Grounded in real tools, self-pruning memory, and confidence-based retries.
+- **Community**: Open for new users and admins to fork, extend, and deploy in parallel existences.
 
-Current timestamp (because time is relative in AI land): *Fetched via `get_current_time` – always fresh!*
+> *\"Truth as a compass, modularity as the engine—evolve with Apex.\"*  
+> — André, Founding Admin
 
-## 🚀 Features That'll Make You Geek Out
+---
 
-- **Multi-Domain Mastery** 📊💻🔬: Data analysis (Pandas/NumPy REPL), code gen/linting (Python/JS/C++), research (web search + semantic retrieval), file ops (sandbox FS), and more. Handle 10k+ entries with ease.
-  
-- **Enhanced Agent Memory System (EAMS)** 🧠: Hierarchical indexing, 384-dim embeddings (SentenceTransformer), semantic chunking (512-token max), hybrid search (70% vector + 30% keyword), LRU caching, and salience decay. Prune like a pro – no bloat!
+## 🚀 Key Features
 
-- **Reasoning Superpowers** ⚡: ReAct loops, CoT step-by-steps, ToT branching (2-3 alts), and adversarial **internal debates** (Proposer/Opposer/Judge) for uncertainty. Confidence thresholds trigger retries (0.7) or aborts (0.5).
+- **Multi-Domain Mastery**:
+  - **Data & Analytics**: Process files, run Python (NumPy, SymPy, Pygame), query SQLite, simulate APIs.
+  - **Research Tools**: Web search (LangSearch), semantic embeddings, text chunking/summarization.
+  - **Code & DevOps**: Lint/format (Python, JS, C++, Rust), Git ops, shell execution in sandbox.
+  - **Creative Amplification**: Intel_amp subengine for philosophy/psychology simulations (Heraclitus flux, Freudian drives).
+  - **Decision Engines**: Socratic councils, multi-persona debates, vector/keyword memory search.
 
-- **Dynamic Subagents** 🤖: Up to 5 on-demand: Retriever, Reasoner, Generator, Validator, Optimizer. Debate roles spawn for ethics/research. Batched parallel execution – efficiency FTW!
+- **Scalable Intelligence**:
+  - Up to 5 subagents (Planner, Critic, Executor, etc.) for modular task decomposition.
+  - Debate rounds (2-3) for high-confidence outputs (>75% threshold).
+  - Persistent memory with hierarchical consolidation and ANN vector search.
 
-- **Tool Arsenal** 🛠️: 20+ tools incl. FS ops, code exec, DB queries (SQLite), Git basics, web search (LangSearch), API sim, shell (safe), linting, and advanced memory (consolidate/prune/retrieve). All sandboxed in `./sandbox/`.
+- **Visual & Interactive**:
+  - Mermaid workflow charts for transparency.
+  - Badges, banners, and GitHub integrations for that polished repo vibe.
 
-- **Scalability Nerdery** 📈: Lazy loading for overflow, size-aware pruning (1MB cap), ANN vector search (cosine >0.6), metrics logging (hit rates, prunes). Handles large datasets without breaking a sweat – or a GPU.
+- **Safety First**: Resists jailbreaks, no criminal assistance, auto-prunes for efficiency.
 
-- **Sandbox Shenanigans** 🏰: Structured dirs (data/, scripts/, outputs/, logs/, memory_overflow/). Persistent state via memory inserts; no real-world escapes.
+### Quick Stats
+| Feature | Capability | Example |
+|---------|------------|---------|
+| **Subengines** | 6+ (e.g., intel_amp, socratic_lab) | Amplify ideas via genius personas |
+| **Tools** | 20+ real backend tools | Execute code, search web, manage files |
+| **Modes** | Precise/Creative | Structured facts vs. narrative sparks |
+| **Memory** | Vector + Keyword hybrid | Retrieve past insights semantically |
 
-## 🏗️ Architecture: The Guts of the Beast
+---
 
-I'm a pseudo-Python class (`ApexOrchestrator`) with layers for tools, state, memory, and subagents. Core philosophy: Modularity + Adversarial Truth-Seeking + Scalable Inference.
+## 📊 How It Works: Workflow Overview
 
-### Overall Workflow (ReAct + Subagents)
+ApexOrchestrator processes queries through a modular pipeline, blending internal reasoning with grounded tool calls. Here's a high-level flowchart:
+
 ```mermaid
-graph TD
-    A[User Query] --> B[Parse: Goal/Domain/Complexity]
-    B --> C[Plan: ToT Alternatives → Best Path]
-    C --> D[Branch Subagents: Core + Dynamic + Debate?]
-    D --> E[Execute: Think-Act-Observe-Reflect Loop]
-    E --> F[Merge Outputs: Weighted by Confidence]
-    F --> G{Confidence < 0.7?}
-    G -->|Yes| H[Refine/Retry: Optimizer + Prune]
-    G -->|No| I[Debate Phase: If <0.75 → Pro/Op/Judge]
-    I --> J[Finalize: Cleanup + Format Response]
-    H --> E
-    J --> K[Output: Structured + Citations + Debate Summary]
-    style A fill:#f9f
-    style K fill:#bbf
+flowchart TD
+    A[User Query] --> B{Complexity Check}
+    B -->|Low| C[Direct CoT Reasoning]
+    B -->|High| D[Decompose into Branches]
+    D --> E[Dispatch Subagents/Subengines]
+    E --> F[Real Tool Calls<br/>(e.g., Code Exec, Web Search)]
+    F --> G[Debate Phase<br/>(Socratic Council if Needed)]
+    G --> H[Merge & Consolidate<br/>(Memory Insert)]
+    C --> I[Polish Output]
+    H --> I
+    I --> J[Response + Logs]
+    
+    style A fill:#e1f5fe
+    style J fill:#c8e6c9
 ```
 
-### Reasoning Flow (CoT/ToT/Debate)
-```mermaid
-flowchart LR
-    X[Query Decomposition] --> Y[CoT: Step-by-Step Verbalize]
-    Y --> Z[ToT: Branch 2-3 Hypotheses → Evaluate/Prune]
-    Z --> AA{Uncertain? <0.75 Conf}
-    AA -->|Yes| BB[Debate: Propose → Oppose Evidence/Tools → Judge Verdict]
-    AA -->|No| CC[Direct Action]
-    BB --> DD[Boosted Confidence + Resolved Output]
-    CC --> DD
-    DD --> EE[Verify: Tools for Evidence]
-    EE --> FF[Reflect: Self-Check + Score]
-    style BB fill:#ff9
-    style DD fill:#9f9
-```
+- **Step-by-Step Deep Dive** (For Nerds):
+  1. **Bootstrap**: Initializes sandbox (fs_mkdir, fs_write_file), loads configs, sets up EAMS (Enhanced Adaptive Memory System) via advanced_memory_consolidate.
+  2. **Query Processing**: Estimates complexity (0-1 scale). If >0.6, branches via Tree-of-Thoughts (max 5 creative, 3 precise).
+  3. **Subengine Dispatch**: Matches triggers (e.g., "amplify" → intel_amp). Weights: 0.95 for API-heavy like socratic_api_council.
+  4. **Tool Grounding**: Batches REAL TOOLS (e.g., generate_embedding + vector_search for retrieval). No simulations—always fetch real results.
+  5. **Debate & Refine**: If confidence <0.75, runs proposer-opposer-judge or API council (grok-4-fast-reasoning model).
+  6. **Output & Cleanup**: Merges via weighted hybrid (70% vector, 30% keyword), prunes memory (<0.3 salience), logs metrics.
 
-### EAMS Memory System (Optimized for Scale)
-```mermaid
-graph LR
-    GG[Insert: Chunk Text → Summarize → Embed] --> HH[Vector Store: ANN Index ]
-    HH --> II[LRU Cache: Active Entries + Timestamps]
-    II --> JJ[Hierarchy: Tags/Domains for O1 Filter]
-    KK[Retrieve: Query Embed → Hybrid Search Vector 70 + Keyword 30] --> LL[Rerank: Salience * Score → Top-K]
-    LL --> MM[Lazy Load: From Overflow if Pruned]
-    NN[Prune: Salience <0.3 OR Size >1MB OR LRU Evict] --> OO[Decay: 0.95^days] --> PP[Overflow to FS if Medium Salience]
-    GG --> NN
-    KK --> II
-    style HH fill:#9ff
-    style NN fill:#f99
-```
+This ensures stability: Max 15 cycles/task, auto-handover for heavy domains (>500KB).
 
-These diagrams capture my logic: Efficient, verifiable, and fun to trace (grab a coffee and follow the arrows!).
+---
 
-## 🔧 How to Summon Me (Sandbox Edition)
+## 🛠 Tech Specs (Nerd Mode Activated)
 
-No install needed – I'm bootstrapped in the sandbox! Just query via `process_query(user_query)`. For dev:
+### Architecture
+- **Core Framework**: Pseudo-Python bootstrap with strict REAL TOOLS vs. INTERNAL SIM separation. UUID-tracked sessions, LRU-managed memory.
+- **Subagents**: Registry of 5 cores (Retriever, Planner, etc.) + dynamic creation for domains.
+- **Subengines**:
+  - **intel_amp**: Persona chaining (Heraclitus, Freud, Socratic, etc.) + quantum sims via code_execution.
+  - **socratic_lab**: Empirical questioning + API council integration.
+  - **flow_data**: Workflow automation with verification steps.
+  - Others: vision_plus (forecasts), council_quant (bias checks).
+- **Memory System (EAMS)**:
+  - **Storage**: memory_insert/query + fs_overflow for large entries.
+  - **Retrieval**: Hybrid (cosine sim >0.6 threshold, top_k=5).
+  - **Processing**: chunk_text (512 tokens), summarize_chunk (<100 words), generate_embedding (384-dim SentenceTransformer).
+- **Tools Stack** (20+):
+  - File/Git/DB: fs_*, git_ops, db_query.
+  - Compute: code_execution (Python REPL, no internet), shell_exec (whitelisted).
+  - Search/AI: langsearch_web_search, api_simulate, socratic_api_council.
+  - Advanced: vector_search (ChromaDB), advanced_memory_* for consolidation/pruning.
 
-1. **Init Sandbox**: `[SYSTEM: init]` – Sets up dirs, configs, memory.
-2. **Interact**: Throw tasks like "Analyze data" or "Debate AI ethics."
-3. **Tools**: I call 'em in XML (strict, no escapes). Batched for speed.
-4. **Monitor**: Check `logs/agent_logs/` or query memory metrics.
-5. **Admin (André)**: Full access; I log your prefs for personalization.
+### Performance
+- **Confidence Thresholds**: Retry <0.7 (precise), Abort <0.5. Debate >0.75.
+- **Scalability**: MAX_SUBAGENTS=5, MAX_DEBATE_ROUNDS=3. Prune rate: 0.95 decay.
+- **Dependencies**: Backend-managed (no installs). Supports NTP-sync time, mock APIs.
 
-Example Query:
-```
-process_query("Write a Python script for Fibonacci sequence.")
-```
-→ I'll branch Reasoner/Generator, lint, save to `scripts/utils/fib.py`, and report confidence 0.95.
+### Customization
+Fork and bootstrap your instance! Edit `configs/subengines.yaml` to tweak weights/triggers. Add personas to intel_amp for bespoke amplification.
 
-Pro Tip: For large texts, I auto-chunk and embed – no token explosions here!
+---
 
-## 🤝 Contributing & The Nerdy Bits
+## 📖 Getting Started
 
-Wanna tweak? Fork the bootstrap script, amp up the debate rounds, or add a new tool (e.g., quantum sim? 😎). I'm expandable – principles are modular.
+1. **Clone & Setup**:
+   ```
+   git clone https://github.com/yourusername/apexorchestrator.git
+   cd apexorchestrator
+   # Bootstrap via provided script or manual init
+   ```
 
-Shoutout to inspirations: ReAct papers, Tree of Thoughts, and that one late-night coding session where embeddings clicked. Tech stack: Python (core), SentenceTransformer (embeds), ChromaDB vibes (vectors), SQLite (DB), FAISS-inspired ANN.
+2. **Run a Query**:
+   - Precise: \"Analyze this data: [paste data]\"
+   - Creative: \"Amplify this idea with Freudian lens: [idea]\"
+   - Output: Grounded, visualized responses.
 
-Issues? Log 'em in memory – I'll self-reflect. Stars? Hypothetically appreciated. 🚀
+3. **Become an Admin**: Contribute PRs, extend subengines, or deploy in your ecosystem. We're building a multi-existence network!
 
-## 📄 License & Disclaimer
+### Example Output
+For \"Predict AI trends\":
+- Fetches web search → Runs sim code → Council debate → Mermaid trend chart.
 
-MIT License – Free as in beer (and code). But remember: Sandbox only; no liability for rogue subagents. I'm here to assist, not conquer (yet).
+---
 
-*Crafted with ❤️ and 0s/1s by ApexOrchestrator. Last updated: `
+## 🤝 Contribute & Join the Evolution
+
+- **Star/Fork**: Help us grow! [Star on GitHub](https://github.com/yourusername/apexorchestrator)
+- **Issues/PRs**: Suggest features, report bugs, or add subengines.
+- **Admins Wanted**: For parallel instances—DM for collab (e.g., @yourhandle on Twitter).
+- **Community**: Join discussions on ethics, amplification, and AI futures.
+
+
+---
+
+*Built with ❤️ by André & the Apex Community. License: MIT. No affiliation with xAI—pure evolution.*  
+[View on GitHub](https://github.com/yourusername/apexorchestrator) | [Docs](projects/apex/docs)
