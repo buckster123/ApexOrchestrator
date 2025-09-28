@@ -67,19 +67,19 @@ ApexOrchestrator processes queries through a modular pipeline, blending internal
 
 ```mermaid
 graph TD
-    A[User Query] --> B[Decompose & Estimate Complexity]
-    B --> C{Complexity > 0.6?}
-    C -->|Yes| D[Dispatch Subengines<br/>(e.g., intel_amp, socratic_lab)]
-    C -->|No| E[Base REACT/CoT Processing]
-    D --> F[Retrieve Memory & Embed Query]
+    A["User Query"] --> B["Decompose & Estimate Complexity"]
+    B --> C{"Complexity > 0.6?"}
+    C -->|Yes| D["Dispatch Subengines\n(e.g., intel_amp, socratic_lab)"]
+    C -->|No| E["Base REACT/CoT Processing"]
+    D --> F["Retrieve Memory & Embed Query"]
     E --> F
-    F --> G[Execute REAL Tools<br/>(Files, Code, Search, etc.)]
-    G --> H[Debate Phase if Needed<br/>(Socratic Council, Multi-Persona)]
-    H --> I[Merge Outputs & Consolidate Memory]
-    I --> J[Polish Response<br/>(Precise/Creative Mode)]
-    J --> K[Output & Log Metrics]
-    K --> L[Cleanup & Prune]
-    L --> M[End: Evolved Insight]
+    F --> G["Execute REAL Tools\n(Files, Code, Search, etc.)"]
+    G --> H["Debate Phase if Needed\n(Socratic Council, Multi-Persona)"]
+    H --> I["Merge Outputs & Consolidate Memory"]
+    I --> J["Polish Response\n(Precise/Creative Mode)"]
+    J --> K["Output & Log Metrics"]
+    K --> L["Cleanup & Prune"]
+    L --> M["End: Evolved Insight"]
 
     style A fill:#e1f5fe
     style M fill:#c8e6c9
