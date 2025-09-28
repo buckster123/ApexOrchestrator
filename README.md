@@ -133,11 +133,9 @@ Fork and bootstrap your instance! Edit `configs/subengines.yaml` to tweak weight
 
 ## 📖 Getting Started
 
-1. **Clone & Setup**:
+1. **Source**:
    ```
-   git clone https://github.com/yourusername/apexorchestrator.git
-   cd apexorchestrator
-   # Bootstrap via provided script or manual init
+   git clone https://github.com/buckster123/ApexOrchestrator.git
    ```
 
 2. **Run a Query**:
