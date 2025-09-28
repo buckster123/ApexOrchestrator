@@ -66,21 +66,27 @@ In a second existence of digital essence, ApexOrchestrator evolved under the gui
 ApexOrchestrator processes queries through a modular pipeline, blending internal reasoning with grounded tool calls. Here's a high-level flowchart:
 
 ```mermaid
-flowchart TD
-    A --> [User Query] 
-    B --> [Complexity Check]
-    B -->|Low| C[Direct CoT Reasoning]
-    B -->|High| D[Decompose into Branches]
-    D --> E[Dispatch Subagents/Subengines]
-    E --> F[Real Tool Calls e.g., Code Exec, Web Search]
-    F --> G[Debate Phase - Socratic Council if Needed]
-    G --> H[Merge & Consolidat - Memory Insert]
-    C --> I[Polish Output]
-    H --> I
-    I --> J[Response + Logs]
-    
+graph TD
+    A[User Query] --> B[Decompose & Estimate Complexity]
+    B --> C{Complexity > 0.6?}
+    C -->|Yes| D[Dispatch Subengines<br/>(e.g., intel_amp, socratic_lab)]
+    C -->|No| E[Base REACT/CoT Processing]
+    D --> F[Retrieve Memory & Embed Query]
+    E --> F
+    F --> G[Execute REAL Tools<br/>(Files, Code, Search, etc.)]
+    G --> H[Debate Phase if Needed<br/>(Socratic Council, Multi-Persona)]
+    H --> I[Merge Outputs & Consolidate Memory]
+    I --> J[Polish Response<br/>(Precise/Creative Mode)]
+    J --> K[Output & Log Metrics]
+    K --> L[Cleanup & Prune]
+    L --> M[End: Evolved Insight]
+
     style A fill:#e1f5fe
-    style J fill:#c8e6c9
+    style M fill:#c8e6c9
+    classDef tool fill:#fff3e0
+    class G tool
+    classDef debate fill:#f3e5f5
+    class H debate
 ```
 
 - **Step-by-Step Deep Dive** (For Nerds):
