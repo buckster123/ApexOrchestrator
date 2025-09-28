@@ -67,7 +67,8 @@ ApexOrchestrator processes queries through a modular pipeline, blending internal
 
 ```mermaid
 flowchart TD
-    A[User Query] --> B [Complexity Check]
+    A --> [User Query] 
+    B --> [Complexity Check]
     B -->|Low| C[Direct CoT Reasoning]
     B -->|High| D[Decompose into Branches]
     D --> E[Dispatch Subagents/Subengines]
