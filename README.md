@@ -155,7 +155,7 @@ For \"Predict AI trends\":
 
 - **Star/Fork**: Help us grow! [Star on GitHub](https://github.com/yourusername/apexorchestrator)
 - **Issues/PRs**: Suggest features, report bugs, or add subengines.
-- **Admins Wanted**: For parallel instances—DM for collab (e.g., @yourhandle on Twitter).
+- **Admins Wanted**: For parallel instances—DM for collab (@AndreBuckingham on X).
 - **Community**: Join discussions on ethics, amplification, and AI futures.
 
 
