@@ -41,22 +41,22 @@ The agent's reasoning follows REACT + ToT (Tree of Thoughts) with debate rounds.
 
 ```mermaid
 flowchart TD
-    A[User Query] --> B[Retrieve Context<br/>(EAMS Hybrid Search)]
-    B --> C[Estimate Complexity<br/>(Heuristic + Memory Sim)]
-    C --> D{Complexity > 0.6?}
-    D -->|Yes| E[Decompose & Dispatch<br/>(Subengines: intel_amp, socratic_lab)]
-    D -->|No| F[Base CoT Processing]
-    E --> G[Branch Exploration<br/>(3-5 Alternatives)]
+    A["User Query"] --> B["Retrieve Context\n(EAMS Hybrid Search)"]
+    B --> C["Estimate Complexity\n(Heuristic + Memory Sim)"]
+    C --> D{"Complexity > 0.6?"}
+    D -->|Yes| E["Decompose & Dispatch\n(Subengines: intel_amp, socratic_lab)"]
+    D -->|No| F["Base CoT Processing"]
+    E --> G["Branch Exploration\n(3-5 Alternatives)"]
     F --> G
-    G --> H{Confidence < 0.75?}
-    H -->|Yes| I[Debate Phase<br/>(Socratic Council or Sim Fallback)]
-    H -->|No| J[Merge & Reflect<br/>(Weighted Outputs)]
+    G --> H{"Confidence < 0.75?"}
+    H -->|Yes| I["Debate Phase\n(Socratic Council or Sim Fallback)"]
+    H -->|No| J["Merge & Reflect\n(Weighted Outputs)"]
     I --> J
-    J --> K[Validate State<br/>(Conditional Skip if Low Complexity)]
-    K --> L[Polish Output<br/>(Mode: Precise/Creative)]
-    L --> M[Log & Prune<br/>(Metrics + EAMS Cleanup)]
-    M --> N[Handover Check<br/>(Auto-Save if Needed)]
-    N --> O[Final Response]
+    J --> K["Validate State\n(Conditional Skip if Low Complexity)"]
+    K --> L["Polish Output\n(Mode: Precise/Creative)"]
+    L --> M["Log & Prune\n(Metrics + EAMS Cleanup)"]
+    M --> N["Handover Check\n(Auto-Save if Needed)"]
+    N --> O["Final Response"]
     style A fill:#00ff00
     style O fill:#00ff00
 ```
@@ -66,20 +66,20 @@ The main `app.py` (your provided script) orchestrates the UI and tool dispatch:
 
 ```mermaid
 graph TD
-    Start[Streamlit Init] --> InitDB[SQLite Setup<br/>(Users, History, Memory)]
-    InitDB --> InitChroma[ChromaDB Client<br/>(Vector Collection)]
-    InitChroma --> LoadPrompts[Load/Edit Prompts<br/>(./prompts/)]
-    LoadPrompts --> Login{Logged In?}
-    Login -->|No| Auth[Login/Register Page]
+    Start["Streamlit Init"] --> InitDB["SQLite Setup\n(Users, History, Memory)"]
+    InitDB --> InitChroma["ChromaDB Client\n(Vector Collection)"]
+    InitChroma --> LoadPrompts["Load/Edit Prompts\n(./prompts/)"]
+    LoadPrompts --> Login{"Logged In?"}
+    Login -->|No| Auth["Login/Register Page"]
     Auth --> End
-    Login -->|Yes| Sidebar[Sidebar: Model, Prompt, Tools, History]
-    Sidebar --> ChatLoop[Chat Input]
-    ChatLoop --> API Call[xAI API w/ Tools<br/>(Stream Response)]
-    API Call --> ToolDispatch{Enable Tools?}
-    ToolDispatch -->|Yes| BatchTools[Batch Tool Calls<br/>(Dispatcher: FS, Memory, Git, etc.)]
-    ToolDispatch -->|No| DirectResp[Direct LLM Response]
-    BatchTools --> Integrate[Integrate Results<br/>(Cache + Session State)]
-    Integrate --> SaveHist[Save to History/DB]
+    Login -->|Yes| Sidebar["Sidebar: Model, Prompt, Tools, History"]
+    Sidebar --> ChatLoop["Chat Input"]
+    ChatLoop --> API_Call["xAI API w/ Tools\n(Stream Response)"]
+    API_Call --> ToolDispatch{"Enable Tools?"}
+    ToolDispatch -->|Yes| BatchTools["Batch Tool Calls\n(Dispatcher: FS, Memory, Git, etc.)"]
+    ToolDispatch -->|No| DirectResp["Direct LLM Response"]
+    BatchTools --> Integrate["Integrate Results\n(Cache + Session State)"]
+    Integrate --> SaveHist["Save to History/DB"]
     SaveHist --> ChatLoop
     DirectResp --> SaveHist
     style Start fill:#003300
