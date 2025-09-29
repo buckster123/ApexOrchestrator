@@ -117,7 +117,7 @@ flowchart LR
     Q["process_query"] --> R["Retrieve Context (Batch Embed + Search)"]
     R --> C["Estimate Complexity"]
     C --> D{"Dispatch Subengines?"}
-    D -->|Yes (>0.6)| SE["Match & Run\n(e.g., intel_amp → Council)"]
+    D -->|"Yes (>0.6)"| SE["Match & Run\n(e.g., intel_amp -> Council)"]
     D -->|No| Base["Base REACT/CoT"]
     SE --> Merge["Merge Outputs (S)"]
     Base --> Merge
