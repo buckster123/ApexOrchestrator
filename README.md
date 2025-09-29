@@ -114,20 +114,20 @@ sequenceDiagram
 #### Query Processing Flow
 ```mermaid
 flowchart LR
-    Q[process_query] --> R[Retrieve Context (Batch Embed + Search)]
-    R --> C[Estimate Complexity]
-    C --> D{Dispatch Subengines?}
-    D -->|Yes (>0.6)| SE[Match & Run<br/>(e.g., intel_amp → Council)]
-    D -->|No| Base[Base REACT/CoT]
-    SE --> Merge[Merge Outputs (S)]
+    Q["process_query"] --> R["Retrieve Context (Batch Embed + Search)"]
+    R --> C["Estimate Complexity"]
+    C --> D{"Dispatch Subengines?"}
+    D -->|Yes (>0.6)| SE["Match & Run\n(e.g., intel_amp → Council)"]
+    D -->|No| Base["Base REACT/CoT"]
+    SE --> Merge["Merge Outputs (S)"]
     Base --> Merge
-    Merge --> Deb{Debate Needed?}
-    Deb -->|Yes| DC[Socratic Council (T) or Fallback (S)]
-    Deb -->|No| V[Validate & Polish]
+    Merge --> Deb{"Debate Needed?"}
+    Deb -->|Yes| DC["Socratic Council (T) or Fallback (S)"]
+    Deb -->|No| V["Validate & Polish"]
     DC --> V
-    V --> Clean[Cleanup/Prune (T)]
-    Clean --> H[Handover?]
-    H --> Out[Return Response]
+    V --> Clean["Cleanup/Prune (T)"]
+    Clean --> H{"Handover?"}
+    H --> Out["Return Response"]
     style Q fill:#00ff00
     style Out fill:#00ff00
 ```
