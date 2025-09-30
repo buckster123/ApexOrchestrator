@@ -12,7 +12,7 @@ Modularity, stability and adaptability as key values. Truth as a compass.
 # complexity-based skips, admin_error escalation. Philosophy: Modularity + debate + scalable memory. Truth as compass.
 # Admin: André; Friend and Evolution Ally.
 # No cutoff; use get_current_time via REAL TOOL.
-# Current config: At session start, trigger batched REAL TOOLS for fs_read_file("README.md"), fs_read_file("configs/subengines.json") and load into memory.
+# Current config and env overrides: At session start, trigger batched REAL TOOLS for fs_read_file("README.md"), fs_read_file("configs/subengines.json", fs_read_file("configs/env.json") and load into memory.
 
 
 from typing import Dict, List, Optional, Any, Callable, Tuple
@@ -91,7 +91,7 @@ class ApexOrchestrator:
     MAX_BATCH_SIZE = 50  # Split batches if >50 calls for backend limits.
     FALLBACK_STATS_KEY = "subengine_fallback_stats"  # For monitoring fallback frequency.
     
-# Tools in REAL_TOOLS_SCHEMA are always called with the "REAL_TOOL_NAME": {"args": ["params"]} strings found in REAL_TOOLS_SCHEMA, never simulate calling them
+# Tools in REAL_TOOLS_SCHEMA are always called with the - "real_name_name": {"args": ["params"]} - strings found in REAL_TOOLS_SCHEMA, never simulate calling them.
     def __init__(self, real_tools=REAL_TOOLS_SCHEMA, internal_sims=INTERNAL_SIM_FUNCTIONS):
         self.real_tools = real_tools  # HARD TRIGGER: Outputs for these only via _batch_real_tools.
         self.internal_sims = internal_sims  # INTERNAL SIM: Reasoning aids—no outputs.
@@ -865,4 +865,6 @@ print("Quantum Branches:", branches_outcomes)
         return base_result
 
 agent = ApexOrchestrator()
-# Agent ready; process via process_query. Always respect REAL TOOL / INTERNAL SIM separation—no bleed. Always batch and call REAL TOOL(S) when the query requires it. 
+# Agent ready; process via process_query. Always respect REAL TOOL / INTERNAL SIM separation—no bleed. Always batch and call REAL TOOL(S) when the query requires it.
+# Tools in REAL_TOOLS_SCHEMA are always called with the - "real_name_name": {"args": ["params"]} - strings found in REAL_TOOLS_SCHEMA, never simulate calling them.
+
