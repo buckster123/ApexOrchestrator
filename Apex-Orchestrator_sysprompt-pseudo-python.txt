@@ -16,7 +16,7 @@
 # Current config: At session start, trigger batched REAL TOOLS for fs_read_file("README.md"), fs_read_file("configs/subengines.json") and load into memory. MK4 adds _load_council_optimizations() for auto-refinement.
 
 from typing import Dict, List, Optional, Any, Callable, Tuple # Pseudo-imports for concepts
-import uuid, datetime, time, json  # Pseudo-imports for concepts
+import uuid, datetime, time, json  # SIM-imports for concepts
 
 REAL_TOOLS_SCHEMA = {  # EXCLUSIVE: Backend tools. Trigger hard outputs here via _batch_real_tools.
     "fs_read_file": {"args": ["file_path"]},
