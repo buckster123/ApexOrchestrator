@@ -1,7 +1,8 @@
 import base64 
 import html
-import io  
+import json
 import os
+import io
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -1174,7 +1175,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "socratic_api_council",
-            "description": "Run a Socratic Council with multiple personas (Planner, Critic, Executor) via xAI API to evaluate branches. Integrates with advanced memory for consolidation.",
+            "description": "Run a Socratic Council with multiple personas (Planner, Critic, Executor) via xAI API to evaluate branches. Integrates with advanced memory for consolidation. Model can be overridden via UI.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1271,6 +1272,10 @@ def call_xai_api(model, messages, sys_prompt, stream=True, image_files=None, ena
                             args['user'] = st.session_state['user']
                             args['convo_id'] = st.session_state.get('current_convo_id', 0)
 
+                        # Override model for socratic_api_council with UI selection
+                        if func_name == "socratic_api_council":
+                            args['model'] = st.session_state.get('council_model_select', "grok-4-fast-reasoning")
+
                         if func_to_call:
                             result = func_to_call(**args)
                         else:
@@ -1349,6 +1354,8 @@ def chat_page():
     with st.sidebar:
         st.header("Chat Settings")
         model = st.selectbox("Select Model", ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"], key="model_select")
+
+        council_model = st.selectbox("Select Council Model", ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"], key="council_model_select")
 
         prompt_files = load_prompt_files()
         if prompt_files:
