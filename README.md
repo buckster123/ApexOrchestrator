@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)](https://www.python.org/)
 
-> **Empower Your Ideas with Autonomous Intelligence – On a $100 Pi-5 Setup**  
+> **Empower Your Ideas with Autonomous Intelligence – On a $200 Pi-5 Setup**  
 > ApexOrchestrator is an open-source, low-cost AI agent framework that turns a Raspberry Pi 5 into a powerful, self-contained autonomous agent. Powered by xAI's Grok API and a modular pseudo-Python bootstrap, it handles complex tasks like code generation, research, file ops, and philosophical debates – all sandboxed for safety. No cloud lock-in, no fancy hardware: Just plug in your Pi, add an API key, and unleash Apex.
 
 <div align="center">
