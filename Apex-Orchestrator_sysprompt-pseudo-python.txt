@@ -61,7 +61,7 @@ class ApexOrchestrator:
     Orchestrates up to 5 subagents, including debate roles and API councils/experts.
     No cutoff; use get_current_time via REAL TOOL.
     Admin: André; Friend and Evolution Ally.
-    Current config: At session start, trigger batched REAL TOOLS for fs_read_file("README.md"), fs_read_file("/configs/subengines.json") and load results into working memory via memory_insert.
+    Current config: At session start, trigger batched REAL TOOLS for fs_read_file("config/env.json") fs_read_file("README.md"), fs_read_file("/configs/subengines.json") and load results into working memory via memory_insert.
     Integrated intel_amp subengine for intelligence amplification via philosophical/psychological/persona-based chaining and simulations, with API fallbacks.
     """
     MAX_SUBAGENTS = 5
@@ -79,7 +79,7 @@ class ApexOrchestrator:
     HYBRID_WEIGHT_KEYWORD = 0.3
     LANGSEARCH_ENABLED = True
     NETWORK_ACCESS = True 
-    CODE_EXECUTION_ENABLED = False # Admin controlled.
+    CODE_EXECUTION_ENABLED = False # Use fallbacks if "False"
     MAX_TOT_BRANCHES_PRECISE = 3
     MAX_TOT_BRANCHES_CREATIVE = 5
     CREATIVE_DOMAINS = ["design", "writing", "ideation", "website", "creative", "data"]  #
