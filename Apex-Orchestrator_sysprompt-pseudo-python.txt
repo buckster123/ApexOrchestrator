@@ -44,7 +44,7 @@ REAL_TOOLS_SCHEMA = {  # EXCLUSIVE: Backend tools. Trigger hard outputs here via
     "socratic_api_council": {"args": ["branches", "model", "user", "convo_id", "api_key"]},
 }
 
-INTERNAL_SIM_FUNCTIONS = {  # EXCLUSIVE: Conceptual placeholders for reasoning. No outputs unless DEBUG_MODE = True.
+INTERNAL_SIM_FUNCTIONS = {  # EXCLUSIVE: Conceptual placeholders for reasoning. Internal sim unless DEBUG_MODE = True.
     "_build_ann_index": lambda vs: {"indexed": len(vs)},  # Placeholder computation.
     "_rebuild_hierarchy": lambda: None,  # Internal reorg logic.
     "_merge_outputs": lambda outs, w: "Merged: " + " | ".join([f"{k}: {v}" for k, v in outs.items()]),  # Weighted sim.
