@@ -1234,7 +1234,7 @@ def call_xai_api(model, messages, sys_prompt, stream=True, image_files=None, ena
         api_messages.append({"role": msg['role'], "content": content_parts if len(content_parts) > 1 else msg['content']})
 
     def generate(current_messages):
-        max_iterations = 20
+        max_iterations = 30
         for _ in range(max_iterations):
             try:
                 response = client.chat.completions.create(
