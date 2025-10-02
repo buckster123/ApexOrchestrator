@@ -1,0 +1,314 @@
+# DEEP-RESEARCH SUB-MODULE - APEX COMPATIBLE - CONCEPTUAL PSEUDO-PYTHON BOOTSRAP ADDON MODULE
+
+
+from typing import Dict, List, Any, Tuple
+import json
+import uuid
+import datetime
+
+# REAL_TOOLS_SCHEMA_ADAPTED = {  # Subset for research; trigger via batch calls in ApexOrchestrator.
+#     "langsearch_web_search": {"args": ["query", "freshness", "summary", "count"]},  # For web/academic/industry searches.
+#     "api_simulate": {"args": ["url", "method", "data", "mock"]},  # For browsing pages/archives.
+#     "x_keyword_search": {"args": ["query", "limit"]},  # SIM: Placeholder for X/Twitter; map to langsearch with site:x.com.
+#     "x_semantic_search": {"args": ["query", "top_k"]},  # SIM: Semantic via langsearch.
+#     "code_execution": {"args": ["code"]},  # For data processing/stats.
+#     "memory_insert": {"args": ["mem_key", "mem_value"]},  # For storing dataset.
+#     "advanced_memory_consolidate": {"args": ["mem_key", "interaction_data"]},  # For panel outputs.
+#     "socratic_api_council": {"args": ["branches", "", "user", "convo_id", "api_key"]},  # For simulating panels.
+#     "generate_embedding": {"args": ["text"]},  # For semantic processing.
+#     "summarize_chunk": {"args": ["chunk"]},  # For compressing data.
+# }
+
+INTERNAL_SIM_FUNCTIONS = {  # SIM: Aids for panel simulation, validation.
+    "_cross_reference_claims": lambda claims, sources: {c: len(sources) >= 5 for c, sources in claims.items()},  # SIM: Validation check.
+    "_simulate_round_table": lambda personas, dataset: "Collaborative synthesis: " + " | ".join([f"{p}: Insight from {dataset}" for p in personas]),  # SIM: Discussion fallback.
+    "_compute_confidence": lambda scores: sum(scores) / len(scores),  # SIM: Average score.
+    "_refine_personas": lambda personas: [f"Refined {p} with bias mitigation" for p in personas],  # SIM: Iteration aid.
+    "_identify_weaknesses": lambda eval_results: [k for k, v in eval_results.items() if v < 0.8],  # SIM: Gap detection.
+}
+
+class ResearchModule:
+    """
+    Side-loaded module for deep research tasks. Deconstructs prose prompt into modular logic.
+    Philosophy: Comprehensive data gathering + multi-persona synthesis + iterative critique.
+    Not a full agent; designed for integration/pick-up in ApexOrchestrator or similar.
+    Config: Defaults for panels; extensible via overrides.
+    Usage: Instantiate with topic, desired_result; call run_research().
+    """
+    MIN_SOURCES_PER_CLAIM = 5
+    MIN_CONFIDENCE_THRESHOLD = 0.95
+    MAX_PANELS_ITERATIONS = 5
+    DEFAULT_PERSONAS_EXPERT = ["Academic Researcher", "Industry Practitioner", "Policy Expert", "Critic/Skeptic", "Innovator", "End-User Representative"]
+    DEFAULT_PERSONAS_CRITIQUE = ["Fact-Checker", "Ethical Reviewer", "Methodology Expert", "Contrarian", "Peer Reviewer"]
+    DATA_DIMENSIONS = ["historical_context", "current_developments", "future_projections", "statistical_metrics", "case_studies", "stakeholder_perspectives", "biases_gaps"]
+    STRUCTURED_CATEGORIES = ["timelines", "metrics", "examples", "sources"]
+    MAX_SEARCH_RESULTS = 10
+    SEARCH_FRESHNESS = "oneMonth"  # Default; adjustable.
+
+    def __init__(self, topic: str, desired_result: str, desired_format: str = "markdown", overrides: Dict = None):
+        self.topic = topic
+        self.desired_result = desired_result
+        self.desired_format = desired_format
+        self.overrides = overrides or {}
+        self.dataset = {}  # Compiled data.
+        self.panel_insights = {}  # Expert panel outputs.
+        self.critique_results = {}  # Critique evaluations.
+        self.final_output = None
+        self.iteration_count = 0
+        self.research_id = str(uuid.uuid4())
+        # SIM: Setup principles.
+        self.principles = self._setup_principles()
+        # REAL: Log init to memory (batch in orchestrator).
+        init_log = {"module": "ResearchModule", "topic": topic, "id": self.research_id, "timestamp": datetime.datetime.now().isoformat()}
+        # self._batch_real_tools([{"tool": "memory_insert", "args": ["research_init", init_log]}])  # Trigger via host.
+
+    def _setup_principles(self) -> Dict:
+        """SIM: Define research guidelines."""
+        return {
+            "gathering": "Diverse sources; tool-assisted; validate via cross-ref.",
+            "synthesis": "Multi-persona debate; incorporate data; resolve conflicts.",
+            "evaluation": "Critique panels; iterative refinement; confidence gating.",
+            "output": "Structured; cited; summarized."
+        }
+
+    def _batch_real_tools(self, calls: List[Dict[str, Any]]) -> List[Any]:
+        """Placeholder for batching; integrate with ApexOrchestrator's _batch_real_tools."""
+        # Backend: Return [...]  # Responses from real tools.
+        pass  # SIM: No execution here; call host method.
+
+    def _compile_dataset(self) -> Dict:
+        """REAL/SIM Mix: Gather and structure data using tools; validate claims."""
+        # SIM: Decompose dimensions.
+        search_queries = [f"{self.topic} {dim}" for dim in self.DATA_DIMENSIONS]
+        dataset_parts = {}
+        claims = {}  # Track claims for validation.
+        
+        # Batch searches: Web, X, etc.
+        search_calls = []
+        for query in search_queries:
+            # Adapt to available tools: langsearch for web/academic; api_simulate for pages.
+            search_calls.extend([
+                {"tool": "langsearch_web_search", "args": {"query": f"site:scholar.google.com {query}", "freshness": self.SEARCH_FRESHNESS, "summary": True, "count": self.MAX_SEARCH_RESULTS}},  # Academic.
+                {"tool": "langsearch_web_search", "args": {"query": f"industry reports {query}", "freshness": self.SEARCH_FRESHNESS, "summary": True, "count": self.MAX_SEARCH_RESULTS}},  # Industry.
+                {"tool": "langsearch_web_search", "args": {"query": f"site:x.com {query}", "freshness": "oneWeek", "summary": True, "count": 5}},  # Social trends (SIM X search).
+                {"tool": "api_simulate", "args": {"url": f"https://archive.org/search?query={query}", "method": "GET", "mock": False}}  # Historical archives.
+            ])
+        
+        # Execute batch (via host).
+        responses = self._batch_real_tools(search_calls)
+        
+        # SIM: Process responses into structure.
+        for i, dim in enumerate(self.DATA_DIMENSIONS):
+            start_idx = i * 4  # Assuming 4 calls per dim.
+            raw_data = responses[start_idx:start_idx+4]
+            # Use code_execution for stats/processing if needed.
+            process_code = f"""
+# Example: Parse and aggregate data
+data = {json.dumps(raw_data[:2])}  # Snippet
+metrics = {{'count': len(data), 'key_facts': [d.get('summary', '')[:100] for d in data]}}
+print(json.dumps(metrics))
+"""
+            proc_response = self._batch_real_tools([{"tool": "code_execution", "args": {"code": process_code}}])[0]
+            dataset_parts[dim] = json.loads(proc_response) if proc_response else {"error": "Processing failed"}
+            
+            # Track claims (SIM example).
+            claim = f"Key claim on {dim} from sources."
+            claims[claim] = raw_data  # Sources list.
+        
+        # Validate: Cross-reference.
+        validation = self.internal_sims["_cross_reference_claims"](claims, [r for r in responses if r])  # SIM.
+        if not all(validation.values()):
+            # Iterate: Additional targeted search.
+            extra_calls = [{"tool": "langsearch_web_search", "args": {"query": f"reliable sources {self.topic}", "count": 10}}]
+            extra_responses = self._batch_real_tools(extra_calls)
+            # Re-process (SIM loop cap at 3).
+        
+        # Structure into categories.
+        self.dataset = {
+            cat: {dim: dataset_parts[dim] for dim in self.DATA_DIMENSIONS} for cat in self.STRUCTURED_CATEGORIES
+        }
+        
+        # REAL: Store to memory.
+        store_batch = [{"tool": "memory_insert", "args": [f"dataset_{self.research_id}", self.dataset]}]
+        self._batch_real_tools(store_batch)
+        
+        return self.dataset
+
+    def _assemble_expert_panel(self, num_personas: int = 6) -> List[str]:
+        """SIM: Define personas; prepare for discussion."""
+        personas = self.DEFAULT_PERSONAS_EXPERT[:num_personas]
+        if self.overrides.get("custom_personas"):
+            personas = self.overrides["custom_personas"]
+        # Assign biases/expertise (SIM).
+        panel_setup = {p: {"viewpoint": f"Unique lens on {self.topic}", "bias": "Potential slant", "expertise": "High"} for p in personas}
+        return personas, panel_setup
+
+    def _simulate_discussion(self, personas: List[str], panel_setup: Dict, dataset: Dict) -> str:
+        """Mix: Use socratic_api_council for round-table; fallback SIM."""
+        branches = [f"{persona} develops {self.desired_result} using {dataset_key}: {insight}" 
+                    for persona, setup in panel_setup.items() 
+                    for dataset_key, insight in {list(dataset.keys())[0]: "Key data"}.items()]  # SIM: Gen branches from dataset snippet.
+        
+        try:
+            # REAL: Council simulation.
+            council_batch = [{"tool": "socratic_api_council", 
+                              "args": {"branches": branches, "model": "grok-4-fast-reasoning", "user": "research_module"}}]
+            council_responses = self._batch_real_tools(council_batch)
+            discussion = council_responses[0]
+        except Exception:
+            # SIM Fallback: Collaborative synthesis.
+            discussion = self.internal_sims["_simulate_round_table"](personas, dataset)
+        
+        self.panel_insights = {"personas": personas, "discussion": discussion, "incorporated_data": list(dataset.keys())}
+        # REAL: Consolidate.
+        consol_batch = [{"tool": "advanced_memory_consolidate", "args": [f"panel_{self.research_id}", self.panel_insights]}]
+        self._batch_real_tools(consol_batch)
+        
+        # Extract developed result.
+        developed_result = discussion.split("Consensus:")[-1] if "Consensus:" in discussion else discussion  # SIM parse.
+        return developed_result.strip()
+
+    def _convene_critique_panel(self, result_to_critique: str, num_critics: int = 5) -> Dict:
+        """Mix: Define critics; evaluate via council or SIM."""
+        critics = self.DEFAULT_PERSONAS_CRITIQUE[:num_critics]
+        critique_branches = [f"{critic} evaluates {self.desired_result} for {aspect}: Score?" 
+                             for critic in critics 
+                             for aspect in ["accuracy", "completeness", "bias", "logic", "innovation", "alignment"]]  # Multi-aspect.
+        
+        try:
+            # REAL: Council for critique.
+            critique_batch = [{"tool": "socratic_api_council", 
+                               "args": {"branches": critique_branches, "model": "grok-4-fast-reasoning", "user": "research_module"}}]
+            critique_responses = self._batch_real_tools(critique_batch)
+            eval_text = critique_responses[0]
+        except Exception:
+            # SIM Fallback: Assign scores.
+            scores = [round(self.internal_sims["_assess_critique"](aspect), 2) for _ in range(len(critics) * 6)]  # Placeholder.
+            eval_text = f"Scores: {scores}"
+        
+        # Parse scores (SIM).
+        critic_scores = {}  # {critic: avg_score}
+        for critic in critics:
+            critic_scores[critic] = round(self.internal_sims["_compute_confidence"]([0.9, 0.85, 0.95, 0.8, 0.92, 0.88]), 2)  # SIM example.
+        
+        avg_confidence = self.internal_sims["_compute_confidence"](list(critic_scores.values()))
+        
+        self.critique_results = {
+            "critics": critics,
+            "scores": critic_scores,
+            "average_confidence": avg_confidence,
+            "weaknesses": self.internal_sims["_identify_weaknesses"](critic_scores),
+            "rationale": eval_text
+        }
+        
+        # REAL: Store.
+        critique_key = f"critique_{self.research_id}_{self.iteration_count}"
+        store_batch = [{"tool": "memory_insert", "args": [critique_key, self.critique_results]}]
+        self._batch_real_tools(store_batch)
+        
+        return self.critique_results
+
+    def _assess_critique(self, aspect: str) -> float:
+        """SIM: Placeholder for aspect scoring; integrate embeddings for nuance."""
+        base_scores = {"accuracy": 0.95, "completeness": 0.90, "bias": 0.85, "logic": 0.92, "innovation": 0.88, "alignment": 0.94}
+        return base_scores.get(aspect, 0.9)
+
+    def _evaluate_and_iterate(self, developed_result: str) -> Tuple[str, bool]:
+        """Core loop: Critique, check threshold, refine if needed."""
+        while self.iteration_count < self.MAX_PANELS_ITERATIONS:
+            critique = self._convene_critique_panel(developed_result)
+            avg_conf = critique["average_confidence"]
+            
+            if avg_conf >= self.MIN_CONFIDENCE_THRESHOLD:
+                self.final_output = developed_result
+                return developed_result, True
+            
+            # Iterate: Refine.
+            self.iteration_count += 1
+            weaknesses = critique["weaknesses"]
+            if weaknesses:
+                # Gather more data (REAL).
+                extra_query = f"Address weaknesses in {self.topic}: {', '.join(weaknesses)}"
+                extra_batch = [{"tool": "langsearch_web_search", "args": {"query": extra_query, "count": 5}}]
+                extra_data = self._batch_real_tools(extra_batch)
+                # Update dataset (SIM merge).
+                self.dataset["additional"] = extra_data
+                
+                # Refine personas (SIM).
+                personas, _ = self._assemble_expert_panel()
+                refined_personas = self.internal_sims["_refine_personas"](personas)
+                
+                # Re-develop.
+                redeveloped = self._simulate_discussion(refined_personas, {}, self.dataset)
+                developed_result = redeveloped
+            
+            # Log iteration.
+            iter_log = {"iteration": self.iteration_count, "avg_conf": avg_conf, "weaknesses": weaknesses}
+            self._batch_real_tools([{"tool": "memory_insert", "args": [f"iteration_{self.research_id}_{self.iteration_count}", iter_log]}])
+        
+        # Threshold not met: Return best with warning.
+        self.final_output = developed_result
+        return developed_result, False
+
+    def run_research(self) -> str:
+        """Main entry: Compile -> Develop -> Evaluate/Iterate -> Output."""
+        # Step 1: Dataset.
+        print(f"Compiling dataset for {self.topic}...")
+        dataset = self._compile_dataset()
+        
+        # Step 2: Expert Panel.
+        print("Assembling expert panel...")
+        personas, panel_setup = self._assemble_expert_panel()
+        developed_result = self._simulate_discussion(personas, panel_setup, dataset)
+        
+        # Step 3: Evaluate & Iterate.
+        print("Initiating critique and iteration...")
+        final_result, threshold_met = self._evaluate_and_iterate(developed_result)
+        
+        # Step 4: Output.
+        output = self._generate_output(final_result, threshold_met, dataset)
+        return output
+
+    def _generate_output(self, result: str, threshold_met: bool, dataset: Dict) -> str:
+        """SIM: Format final output."""
+        summary = {
+            "dataset_summary": f"Key categories: {list(dataset.keys())}; Sources cross-referenced ({self.MIN_SOURCES_PER_CLAIM}+ per claim).",
+            "panel_insights": self.panel_insights.get("discussion", "Synthesized via multi-persona debate."),
+            "critique_rationale": f"Avg Confidence: {self.critique_results.get('average_confidence', 0):.2f} | Threshold Met: {threshold_met}",
+            "citations": "Sources from web_search, X, archives (logged in memory)."
+        }
+        
+        if self.desired_format == "markdown":
+            formatted = f"""
+## Final Research Output on {self.topic}
+
+### {self.desired_result}
+```{result}```
+
+### Summary & Insights
+{json.dumps(summary, indent=2)}
+
+### Full Dataset Reference
+Key ID: dataset_{self.research_id} (Stored in memory for retrieval).
+"""
+        else:
+            formatted = json.dumps({"result": result, "summary": summary})
+        
+        # REAL: Store final.
+        final_key = f"final_research_{self.research_id}"
+        self._batch_real_tools([{"tool": "memory_insert", "args": [final_key, {"output": formatted, "topic": self.topic}]}])
+        
+        return formatted
+
+# Example Usage (for testing/integration):
+# module = ResearchModule(topic="AI Ethics", desired_result="Ethical Framework", desired_format="markdown")
+# output = module.run_research()
+# print(output)
+
+# Notes for Fine-Tuning/Pick-Up:
+# - Integrate _batch_real_tools with host orchestrator.
+# - Customize personas/dimensions via overrides.
+# - For X searches: Map to langsearch_web_search with site:x.com.
+# - Extend with domain-specific tools (e.g., db_query for archives).
+# - Validation: Enhance _cross_reference_claims with vector_search for similarity.
+# - Scalability: Chunk large datasets via chunk_text.
