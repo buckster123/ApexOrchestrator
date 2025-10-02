@@ -30,7 +30,7 @@ Perfect for hobbyists prototyping agents, educators teaching AI ethics, or anyon
 - **Debate & Council**: Socratic API councils or sim fallbacks for robust decision-making.  
 - **Sandbox Everything**: FS ops, shell exec, code REPL – all in `./sandbox/`.  
 - **Handover System**: Auto-save/resume sessions for long-running tasks.  
-- **Pi-Optimized**: ~5-7GB install; first-run model load in 5-10 min.  
+- **Pi-Optimized**: CPU only mebedding models, lazy loading, and other.  
 
 ## 🏗️ Architecture Overview  
 
