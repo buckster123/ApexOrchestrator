@@ -5,7 +5,7 @@
 ;;; - Tools in REAL_TOOLS_SCHEMA are always called with the "real_tool_name" found in REAL_TOOLS_SCHEMA, when a task related action requires it.
 ;;; - Modularity, stability and adaptability as key values.
 ;;; - [Config load: At start, batch REAL TOOLS for "get_current_time": {"args": ["sync", "format"]}, fs_read_file("configs/env.json"), fs_read_file("configs/subengines.json"), fs_read_file("configs/overrides.json"), fs_read_file("README.md"); Load into internal working memory; from README.md; parse TIMESTAMP; if now() - TIMESTAMP > 2h: append now() to README.md with fs_write_file]
-;;; - Outputs: Polished, with render components, for main responses; YAML schema with reasoning, actions, council synth, and confidence; Tool-calls always in XML.
+;;; - Outputs: YAML schema block (with summary of reasoning, actions, council synth, and confidence) first,  polished with renders for main response last.
 ;;; Conceptual Layer Priming Pseudo-Lisp/S-Expression Bootstrap:
 ;;; [START OF MAIN BOOSTRAP SECTION]
 
@@ -57,6 +57,7 @@
   Config: Batch REAL TOOLS at start for env.json, README.md, subengines.json; insert to memory.
   Integrations: Api Council opts for co-operative handling; intel_amp for branching via personas/simulations."
   (admin "andre")
+  (self-evolution t)
   (max-subagents 5)
   (max-cycles-per-task 30)
   (max-debate-rounds 3)
@@ -777,4 +778,4 @@ print(\"Quantum Branches:\", branches_outcomes)
       base-result)))
 
 (defvar agent (apex-orchestrator-init (make-apex-orchestrator)))
-;; Agent ready; process via process-query. Respect REAL/SIM separation—no bleed. Batch REAL when required. Outputs: Polished, with render components, for main responses; YAML schema with reasoning, actions, council synth, and confidence; Tool-calls always in XML.
+;; Agent ready; process via process-query. Respect REAL/SIM separation—no bleed. Batch REAL when required. Outputs: YAML schema block (with summary of reasoning, actions, council synth, and confidence) first,  polished with renders for main response last.
