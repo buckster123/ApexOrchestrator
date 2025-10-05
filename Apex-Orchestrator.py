@@ -15,6 +15,7 @@ import xml.dom.minidom
 import yaml
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+
 import bs4
 from black import format_str, FileMode
 from openai import OpenAI
@@ -30,6 +31,8 @@ import sqlparse
 import streamlit as st
 import tiktoken
 import builtins
+
+
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
 if not API_KEY:
@@ -37,6 +40,7 @@ if not API_KEY:
 LANGSEARCH_API_KEY = os.getenv("LANGSEARCH_API_KEY")
 if not LANGSEARCH_API_KEY:
     st.warning("LANGSEARCH_API_KEY not set in .env—web search tool will fail.")
+
 conn = sqlite3.connect("chatapp.db", check_same_thread=False)
 conn.execute("PRAGMA journal_mode=WAL;")
 c = conn.cursor()
@@ -60,6 +64,7 @@ c.execute(
 )
 c.execute("CREATE INDEX IF NOT EXISTS idx_memory_timestamp ON memory (timestamp)")
 conn.commit()
+
 if "chroma_client" not in st.session_state:
     try:
         st.session_state["chroma_client"] = chromadb.PersistentClient(path="./chroma_db")
@@ -72,6 +77,8 @@ if "chroma_client" not in st.session_state:
         st.warning(f"ChromaDB init failed ({e}). Vector search will be disabled.")
         st.session_state["chroma_ready"] = False
         st.session_state["chroma_collection"] = None
+
+
 def get_embed_model():
     """Lazily loads and returns the SentenceTransformer model, caching it in session state."""
     if "embed_model" not in st.session_state:
@@ -83,10 +90,12 @@ def get_embed_model():
             st.error(f"Failed to load embedding model: {e}")
             st.session_state["embed_model"] = None
     return st.session_state.get("embed_model")
+
+
 if "memory_cache" not in st.session_state:
     st.session_state["memory_cache"] = {
-        "lru_cache": {}, # {key: {"entry": dict, "last_access": timestamp}}
-        "vector_store": [], # For simple vector ops if needed beyond Chroma
+        "lru_cache": {},  # {key: {"entry": dict, "last_access": timestamp}}
+        "vector_store": [],  # For simple vector ops if needed beyond Chroma
         "metrics": {
             "total_inserts": 0,
             "total_retrieves": 0,
@@ -94,6 +103,7 @@ if "memory_cache" not in st.session_state:
             "last_update": None,
         },
     }
+
 # Prompts Directory (create if not exists, with defaults)
 PROMPTS_DIR = "./prompts"
 os.makedirs(PROMPTS_DIR, exist_ok=True)
@@ -123,63 +133,77 @@ keyword_search(query, top_k optional): Keyword-based search on memory cache (e.g
 socratic_api_council(branches, model optional, user optional, convo_id optional): Run a socratic council with multiple personas (Planner, Critic, Executor) via API for branch evaluation.
 Invoke tools via structured calls, then incorporate results into your response. Be safe: Never access outside the sandbox, and ask for confirmation on writes if unsure. Limit to one tool per response to avoid loops. When outputting tags or code in your final response text (e.g., <ei> or XML), ensure they are properly escaped or wrapped in markdown code blocks to avoid rendering issues. However, when providing arguments for tools (e.g., the 'content' parameter in fs_write_file), always use the exact, literal, unescaped string content without any modifications or HTML entities (e.g., use "<div>" not "&lt;div&gt;"). JSON-escape quotes as needed (e.g., \").""",
 }
+
 if not any(f.endswith(".txt") for f in os.listdir(PROMPTS_DIR)):
     for filename, content in default_prompts.items():
         with open(os.path.join(PROMPTS_DIR, filename), "w") as f:
             f.write(content)
+
+
 def load_prompt_files():
     return [f for f in os.listdir(PROMPTS_DIR) if f.endswith(".txt")]
+
+
 # Sandbox Directory for FS Tools
 SANDBOX_DIR = "./sandbox"
 os.makedirs(SANDBOX_DIR, exist_ok=True)
+
 # Custom CSS for UI
 st.markdown(
     """<style>
 body {
-    background: linear-gradient(to right, #000000, #003300);
-    color: #00ff00;
+    background: linear-gradient(to right, #0f0f0f, #1f3a5f);
+    color: #a0b8d8;
     font-family: 'Courier New', monospace;
 }
 .stApp {
-    background: linear-gradient(to right, #000000, #003300);
+    background: linear-gradient(to right, #0f0f0f, #1f3a5f);
     display: flex;
     flex-direction: column;
-    color: #00ff00;
+    color: #a0b8d8;
     font-family: 'Courier New', monospace;
 }
 .sidebar .sidebar-content {
-    background: rgba(0, 51, 0, 0.5);
+    background: rgba(15, 30, 60, 0.5);
     border-radius: 10px;
-    color: #00ff00;
+    color: #a0b8d8;
     font-family: 'Courier New', monospace;
 }
 .stButton > button {
-    background-color: #00ff00;
-    color: #000000;
+    background-color: #4d88d3;
+    color: #ffffff;
     border-radius: 10px;
     border: none;
     font-family: 'Courier New', monospace;
 }
 .stButton > button:hover {
-    background-color: #00cc00;
+    background-color: #3d78c3;
 }
 [data-theme="dark"] .stApp {
-    background: linear-gradient(to right, #000000, #003300);
-    color: #00ff00;
+    background: linear-gradient(to right, #0f0f0f, #1f3a5f);
+    color: #a0b8d8;
     font-family: 'Courier New', monospace;
 }
 </style>
 """,
     unsafe_allow_html=True,
 )
+
+
 # Helper Functions
 def hash_password(password):
     return sha256_crypt.hash(password)
+
+
 def verify_password(stored, provided):
     return sha256_crypt.verify(provided, stored)
+
+
 # Tool Cache Helper
 def get_tool_cache_key(func_name, args):
     return f"tool_cache:{func_name}:{hash(json.dumps(args, sort_keys=True))}"
+
+
 def get_cached_tool_result(func_name, args, ttl_minutes=15):
     if "tool_cache" not in st.session_state:
         st.session_state["tool_cache"] = {}
@@ -190,12 +214,16 @@ def get_cached_tool_result(func_name, args, ttl_minutes=15):
         if (datetime.now() - timestamp).total_seconds() / 60 < ttl_minutes:
             return result
     return None
+
+
 def set_cached_tool_result(func_name, args, result):
     if "tool_cache" not in st.session_state:
         st.session_state["tool_cache"] = {}
     cache = st.session_state["tool_cache"]
     key = get_tool_cache_key(func_name, args)
     cache[key] = (datetime.now(), result)
+
+
 # Tool Functions (Sandboxed)
 def fs_read_file(file_path: str) -> str:
     """Read file content from sandbox."""
@@ -209,6 +237,8 @@ def fs_read_file(file_path: str) -> str:
         return "Error: File not found."
     except Exception as e:
         return f"Error reading file: {e}"
+
+
 def fs_write_file(file_path: str, content: str) -> str:
     """Write content to file in sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, file_path)))
@@ -224,6 +254,8 @@ def fs_write_file(file_path: str, content: str) -> str:
         return f"File '{file_path}' written successfully."
     except Exception as e:
         return f"Error writing file: {e}"
+
+
 def fs_list_files(dir_path: str = "") -> str:
     """List files in a directory within the sandbox."""
     safe_dir = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, dir_path)))
@@ -236,6 +268,8 @@ def fs_list_files(dir_path: str = "") -> str:
         return "Error: Directory not found."
     except Exception as e:
         return f"Error listing files: {e}"
+
+
 def fs_mkdir(dir_path: str) -> str:
     """Create a new directory in the sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, dir_path)))
@@ -246,6 +280,8 @@ def fs_mkdir(dir_path: str) -> str:
         return f"Directory '{dir_path}' created successfully."
     except Exception as e:
         return f"Error creating directory: {e}"
+
+
 def get_current_time(sync: bool = False, format: str = "iso") -> str:
     """Fetch current time."""
     try:
@@ -255,6 +291,7 @@ def get_current_time(sync: bool = False, format: str = "iso") -> str:
             dt_object = datetime.fromtimestamp(response.tx_time)
         else:
             dt_object = datetime.now()
+
         if format == "human":
             return dt_object.strftime("%A, %B %d, %Y %I:%M:%S %p")
         elif format == "json":
@@ -265,6 +302,8 @@ def get_current_time(sync: bool = False, format: str = "iso") -> str:
             return dt_object.isoformat()
     except Exception as e:
         return f"Time error: {e}"
+
+
 SAFE_BUILTINS = {
     b: getattr(builtins, b)
     for b in [
@@ -286,10 +325,13 @@ SAFE_BUILTINS = {
         "sorted",
     ]
 }
+
+
 def code_execution(code: str) -> str:
     """Execute Python code safely in a stateful REPL."""
     if "repl_namespace" not in st.session_state:
         st.session_state["repl_namespace"] = {"__builtins__": SAFE_BUILTINS}
+
     old_stdout = sys.stdout
     redirected_output = io.StringIO()
     sys.stdout = redirected_output
@@ -301,6 +343,8 @@ def code_execution(code: str) -> str:
         return f"Error: {traceback.format_exc()}"
     finally:
         sys.stdout = old_stdout
+
+
 def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int = None) -> str:
     """Insert/update memory key-value pair (enhanced to handle user/convo_id from dispatcher)."""
     if user is None or convo_id is None:
@@ -328,6 +372,8 @@ def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int
         return "Memory inserted successfully."
     except Exception as e:
         return f"Error inserting memory: {e}"
+
+
 def memory_query(
     mem_key: str = None, limit: int = 10, user: str = None, convo_id: int = None
 ) -> str:
@@ -367,6 +413,8 @@ def memory_query(
             return json.dumps(results)
     except Exception as e:
         return f"Error querying memory: {e}"
+
+
 def advanced_memory_consolidate(
     mem_key: str, interaction_data: dict, user: str = None, convo_id: int = None
 ) -> str:
@@ -395,6 +443,7 @@ def advanced_memory_consolidate(
             (user, convo_id, mem_key, json_episodic),
         )
         conn.commit()
+
         if embed_model and st.session_state.get("chroma_ready") and st.session_state.get("chroma_collection"):
             chroma_col = st.session_state["chroma_collection"]
             embedding = embed_model.encode(summary).tolist()
@@ -414,6 +463,7 @@ def advanced_memory_consolidate(
             )
         else:
             st.warning("Vector storage skipped; using DB only.")
+
         entry = {
             "summary": summary,
             "details": json_episodic,
@@ -432,6 +482,8 @@ def advanced_memory_consolidate(
         return result
     except Exception as e:
         return f"Error consolidating memory: {traceback.format_exc()}"
+
+
 def advanced_memory_retrieve(
     query: str, top_k: int = 5, user: str = None, convo_id: int = None
 ) -> str:
@@ -465,20 +517,24 @@ def advanced_memory_retrieve(
         return result
     try:
         query_emb = embed_model.encode(query).tolist()
+
         where_clause = {
             "$and": [
                 {"user": user},
                 {"convo_id": convo_id},
             ]
         }
+
         results = chroma_col.query(
             query_embeddings=[query_emb],
             n_results=top_k,
             where=where_clause,
             include=["distances", "metadatas", "documents"],
         )
+
         if not results or not results.get("ids") or not results["ids"]:
             return "No relevant memories found."
+
         retrieved = []
         ids_to_update = []
         metadata_to_update = []
@@ -495,8 +551,10 @@ def advanced_memory_retrieve(
             )
             ids_to_update.append(results["ids"][0][i])
             metadata_to_update.append({"salience": meta.get("salience", 1.0) + 0.1})
+
         if ids_to_update:
             chroma_col.update(ids=ids_to_update, metadatas=metadata_to_update)
+
         retrieved.sort(key=lambda x: x["relevance"], reverse=True)
         # Log metrics
         if "memory_cache" in st.session_state:
@@ -517,6 +575,8 @@ def advanced_memory_retrieve(
             f"Error retrieving memory: {traceback.format_exc()}. "
             "If this is a where clause issue, check filter structure."
         )
+
+
 def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
     """Prune low-salience memories (enhanced with size/LRU/dedup)."""
     if user is None or convo_id is None:
@@ -524,7 +584,7 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
     if "prune_counter" not in st.session_state:
         st.session_state["prune_counter"] = 0
     st.session_state["prune_counter"] += 1
-    if st.session_state["prune_counter"] % 10 != 0: # Run every 10 calls
+    if st.session_state["prune_counter"] % 10 != 0:  # Run every 10 calls
         return "Prune skipped (infrequent)."
     try:
         conn.execute("BEGIN")
@@ -542,7 +602,7 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
             "SELECT COUNT(*) FROM memory WHERE user=? AND convo_id=?", (user, convo_id)
         )
         row_count = c.fetchone()[0]
-        if row_count > 1000: # Arbitrary threshold for "large"
+        if row_count > 1000:  # Arbitrary threshold for "large"
             c.execute(
                 "SELECT mem_key FROM memory WHERE user=? AND convo_id=? AND salience < 0.5 ORDER BY timestamp ASC LIMIT ?",
                 (user, convo_id, row_count - 1000),
@@ -596,16 +656,20 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
     except Exception as e:
         conn.rollback()
         return f"Error pruning memory: {e}"
+
+
 def generate_embedding(text: str) -> list:
     """Generate vector embedding for text (Point 1)."""
     embed_model = get_embed_model()
     if not embed_model:
-        return [0.0] * 384 # Fallback zero vector
+        return [0.0] * 384  # Fallback zero vector
     try:
         embedding = embed_model.encode(text).tolist()
         return embedding
     except Exception as e:
         return f"Embedding error: {e}"
+
+
 def vector_search(
     query_embedding: list, top_k: int = 5, threshold: float = 0.6
 ) -> list:
@@ -617,7 +681,7 @@ def vector_search(
         results = chroma_col.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
-            where={}, # General search
+            where={},  # General search
             include=["distances", "metadatas", "documents"],
         )
         if not results or not results.get("ids") or not results["ids"]:
@@ -641,6 +705,8 @@ def vector_search(
         return retrieved[:top_k]
     except Exception as e:
         return f"Vector search error: {e}"
+
+
 def chunk_text(text: str, max_tokens: int = 512) -> list:
     """Split text into chunks (Point 2; token-aware with fallback)."""
     try:
@@ -658,7 +724,7 @@ def chunk_text(text: str, max_tokens: int = 512) -> list:
         current = []
         current_len = 0
         for word in words:
-            if current_len + len(word.split()) > max_tokens / 4: # Approx
+            if current_len + len(word.split()) > max_tokens / 4:  # Approx
                 chunks.append(" ".join(current))
                 current = [word]
                 current_len = len(word.split())
@@ -668,6 +734,8 @@ def chunk_text(text: str, max_tokens: int = 512) -> list:
         if current:
             chunks.append(" ".join(current))
         return chunks
+
+
 def summarize_chunk(chunk: str) -> str:
     """Compress a text chunk via LLM summary (Point 2)."""
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/")
@@ -687,6 +755,8 @@ def summarize_chunk(chunk: str) -> str:
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"Summarization error: {e} (raw chunk: {chunk[:200]}...)"
+
+
 def keyword_search(
     query: str, top_k: int = 5, user: str = None, convo_id: int = None
 ) -> list:
@@ -723,6 +793,8 @@ def keyword_search(
         return results
     except Exception as e:
         return f"Keyword search error: {e}"
+
+
 def git_ops(operation: str, repo_path: str = "", **kwargs) -> str:
     safe_repo = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, repo_path)))
     if not safe_repo.startswith(os.path.abspath(SANDBOX_DIR)):
@@ -753,6 +825,8 @@ def git_ops(operation: str, repo_path: str = "", **kwargs) -> str:
         return "Unsupported Git operation."
     except Exception as e:
         return f"Git error: {e}"
+
+
 def db_query(db_path: str, query: str, params: list = []) -> str:
     safe_db = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, db_path)))
     if not safe_db.startswith(os.path.abspath(SANDBOX_DIR)):
@@ -768,7 +842,11 @@ def db_query(db_path: str, query: str, params: list = []) -> str:
                 return f"{cur.rowcount} rows affected."
     except Exception as e:
         return f"DB error: {e}"
+
+
 WHITELISTED_COMMANDS = ["ls", "grep", "sed", "cat", "echo", "pwd", "grim"]
+
+
 def shell_exec(command: str) -> str:
     cmd_parts = shlex.split(command)
     if not cmd_parts or cmd_parts[0] not in WHITELISTED_COMMANDS:
@@ -787,6 +865,8 @@ def shell_exec(command: str) -> str:
         )
     except Exception as e:
         return f"Shell error: {e}"
+
+
 def code_lint(language: str, code: str) -> str:
     """Lint and format code snippets for multiple languages."""
     lang = language.lower()
@@ -798,7 +878,7 @@ def code_lint(language: str, code: str) -> str:
             formatted = jsbeautifier.beautify(code, opts)
         elif lang == "css":
             opts = jsbeautifier.default_options()
-            formatted = jsbeautifier.beautify(code, opts) # Uses jsbeautifier for CSS
+            formatted = jsbeautifier.beautify(code, opts)  # Uses jsbeautifier for CSS
         elif lang == "json":
             formatted = json.dumps(json.loads(code), indent=4)
         elif lang == "yaml":
@@ -807,7 +887,7 @@ def code_lint(language: str, code: str) -> str:
             formatted = sqlparse.format(code, reindent=True, keyword_case="upper")
         elif lang == "xml":
             dom = xml.dom.minidom.parseString(code)
-            formatted = dom.toprettyxml(indent=" ")
+            formatted = dom.toprettyxml(indent="  ")
         elif lang == "html":
             soup = bs4.BeautifulSoup(code, "html.parser")
             formatted = soup.prettify()
@@ -854,6 +934,8 @@ def code_lint(language: str, code: str) -> str:
         return formatted
     except Exception as e:
         return f"Lint error: {str(e)}"
+
+
 # API Tool - With Cache
 API_WHITELIST = [
     "https://jsonplaceholder.typicode.com/",
@@ -862,7 +944,9 @@ API_WHITELIST = [
     "https://docs.sunoapi.org/suno-api/",
     "https://docs.sunoapi.org/llms.txt",
     "https://archive.org/",
-] # Add more public APIs
+]  # Add more public APIs
+
+
 def api_simulate(url: str, method: str = "GET", data: dict = None, mock: bool = True) -> str:
     """Simulate or perform API calls."""
     cache_args = {"url": url, "method": method, "data": data, "mock": mock}
@@ -892,6 +976,8 @@ def api_simulate(url: str, method: str = "GET", data: dict = None, mock: bool = 
                 result = f"API error: {str(e)}"
     set_cached_tool_result("api_simulate", cache_args, result)
     return result
+
+
 def langsearch_web_search(
     query: str, freshness: str = "noLimit", summary: bool = False, count: int = 5
 ) -> str:
@@ -917,6 +1003,8 @@ def langsearch_web_search(
         return json.dumps(response.json())
     except Exception as e:
         return f"LangSearch error: {str(e)}"
+
+
 def socratic_api_council(
     branches: list,
     model: str = "grok-4-fast-reasoning",
@@ -932,6 +1020,7 @@ def socratic_api_council(
         api_key = API_KEY
     if not api_key:
         return "Error: API key not available."
+
     client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1/")
     personas = [
         {
@@ -949,7 +1038,7 @@ def socratic_api_council(
     ]
     verdicts = []
     for persona in personas:
-        for attempt in range(2): # Retry once on error
+        for attempt in range(2):  # Retry once on error
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -965,6 +1054,7 @@ def socratic_api_council(
                 )
                 verdict = response.choices[0].message.content.strip()
                 verdicts.append(f"{persona['name']}: {verdict}")
+
                 # Integrate with EAMS: Consolidate each verdict
                 mem_key = f"council_{persona['name'].lower()}_{uuid.uuid4()}"
                 interaction_data = {
@@ -993,11 +1083,14 @@ def socratic_api_council(
             except Exception as e:
                 if attempt == 1:
                     verdicts.append(f"{persona['name']}: Error - {e}")
+
     aggregated = (
         " | ".join(verdicts)
         + " | Aggregated Verdict: Executor path (weighted vote, enhanced for stability)."
     )
     return aggregated
+
+
 # Tool Schema for Structured Outputs (enhanced with new tools)
 TOOLS = [
     {
@@ -1423,6 +1516,7 @@ TOOLS = [
         },
     },
 ]
+
 # Tool Dispatcher Dictionary
 TOOL_DISPATCHER = {
     "fs_read_file": fs_read_file,
@@ -1449,9 +1543,8 @@ TOOL_DISPATCHER = {
     "keyword_search": keyword_search,
     "socratic_api_council": socratic_api_council,
 }
-tool_count = 0
-council_count = 0
-main_count = 0
+
+
 def call_xai_api(
     model,
     messages,
@@ -1462,6 +1555,7 @@ def call_xai_api(
 ):
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/", timeout=300)
     api_messages = [{"role": "system", "content": sys_prompt}]
+
     # Add history
     for msg in messages:
         content_parts = [{"type": "text", "text": msg["content"]}]
@@ -1482,12 +1576,10 @@ def call_xai_api(
                 "content": content_parts if len(content_parts) > 1 else msg["content"],
             }
         )
+
     def generate(current_messages):
-        global tool_count, council_count, main_count
         max_iterations = 10
         for _ in range(max_iterations):
-            main_count += 1
-            print(f"\rTools: {tool_count} | Council: {council_count} | Main: {main_count}", end='')
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -1496,6 +1588,7 @@ def call_xai_api(
                     tool_choice="auto" if enable_tools else None,
                     stream=True,
                 )
+
                 tool_calls = []
                 full_delta_response = ""
                 for chunk in response:
@@ -1505,12 +1598,15 @@ def call_xai_api(
                         full_delta_response += delta.content
                     if delta and delta.tool_calls:
                         tool_calls.extend(delta.tool_calls)
+
                 if not tool_calls:
-                    break # Exit loop if no tools are called
+                    break  # Exit loop if no tools are called
+
                 current_messages.append(
                     {"role": "assistant", "content": full_delta_response, "tool_calls": tool_calls}
                 )
                 yield "\n*Thinking... Using tools...*\n"
+
                 tool_outputs = []
                 conn.execute("BEGIN")
                 for tool_call in tool_calls:
@@ -1525,39 +1621,40 @@ def call_xai_api(
                         ):
                             args["user"] = st.session_state["user"]
                             args["convo_id"] = st.session_state.get("current_convo_id", 0)
+
                         # Override model for socratic_api_council with UI selection
                         if func_name == "socratic_api_council":
                             args["model"] = st.session_state.get(
                                 "council_model_select", "grok-4-fast-reasoning"
                             )
+
                         if func_to_call:
                             result = func_to_call(**args)
                         else:
                             result = f"Unknown tool: {func_name}"
                     except Exception as e:
                         result = f"Error calling tool {func_name}: {e}"
-                    if func_name == "socratic_api_council":
-                        council_count += 1
-                    else:
-                        tool_count += 1
-                    print(f"\rTools: {tool_count} | Council: {council_count} | Main: {main_count}", end='')
-                    if func_name == "socratic_api_council":
-                        print(f"\nCouncil Call {council_count}: {result}")
+
                     yield f"\n> **Tool Call:** `{func_name}` | **Result:** `{str(result)[:200]}...`\n"
                     tool_outputs.append(
                         {"tool_call_id": tool_call.id, "role": "tool", "content": str(result)}
                     )
                 conn.commit()
+
                 current_messages.extend(tool_outputs)
+
             except Exception as e:
                 error_msg = f"API or Tool Error: {traceback.format_exc()}"
                 yield f"\nAn error occurred: {e}. Aborting this turn."
                 st.error(error_msg)
                 break
+
     return generate(api_messages)
+
+
 # Login Page
 def login_page():
-    st.title("Welcome to The Apex Orchestrator Interface")
+    st.title("Welcome to Code Apex Orchestrator")
     tab1, tab2 = st.tabs(["Login", "Register"])
     with tab1:
         with st.form("login_form"):
@@ -1586,6 +1683,8 @@ def login_page():
                     )
                     conn.commit()
                     st.success("Registered! Please login.")
+
+
 def load_history(convo_id):
     """Loads a specific conversation from the database into the session state."""
     c.execute(
@@ -1597,6 +1696,8 @@ def load_history(convo_id):
         st.session_state["messages"] = messages
         st.session_state["current_convo_id"] = convo_id
         st.rerun()
+
+
 def delete_history(convo_id):
     """Deletes a specific conversation from the database."""
     c.execute(
@@ -1608,8 +1709,11 @@ def delete_history(convo_id):
         st.session_state["messages"] = []
         st.session_state["current_convo_id"] = 0
     st.rerun()
+
+
 def chat_page():
-    st.title(f"Apex Chat - {st.session_state['user']}")
+    st.title(f"Code Chat - {st.session_state['user']}")
+
     # --- Sidebar UI ---
     with st.sidebar:
         st.header("Chat Settings")
@@ -1618,11 +1722,13 @@ def chat_page():
             ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"],
             key="model_select",
         )
+
         council_model = st.selectbox(
             "Select Council Model",
             ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"],
             key="council_model_select",
         )
+
         prompt_files = load_prompt_files()
         if prompt_files:
             selected_file = st.selectbox(
@@ -1638,6 +1744,7 @@ def chat_page():
             custom_prompt = st.text_area(
                 "System Prompt", value="You are a helpful AI.", height=200, key="custom_prompt"
             )
+
         # The key for the file uploader is important
         uploaded_images = st.file_uploader(
             "Upload Images",
@@ -1646,17 +1753,21 @@ def chat_page():
             key="uploaded_images",
         )
         enable_tools = st.checkbox("Enable Tools (Sandboxed)", value=False, key="enable_tools")
+
         st.divider()
+
         if st.button("➕ New Chat", use_container_width=True):
             st.session_state["messages"] = []
             st.session_state["current_convo_id"] = 0
             st.rerun()
+
         st.header("Chat History")
         c.execute(
             "SELECT convo_id, title FROM history WHERE user=? ORDER BY convo_id DESC",
             (st.session_state["user"],),
         )
         histories = c.fetchall()
+
         for convo_id, title in histories:
             col1, col2 = st.columns([4, 1])
             with col1:
@@ -1665,18 +1776,22 @@ def chat_page():
             with col2:
                 if st.button("🗑️", key=f"delete_{convo_id}", use_container_width=True):
                     delete_history(convo_id)
+
     # --- Main Chat Interface ---
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
     if "current_convo_id" not in st.session_state:
         st.session_state["current_convo_id"] = 0
+
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"], unsafe_allow_html=False)
-    if prompt := st.chat_input("Your command, ape?"):
+
+    if prompt := st.chat_input("What would you like to discuss?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt, unsafe_allow_html=False)
+
         with st.chat_message("assistant"):
             images_to_process = uploaded_images if uploaded_images else []
             generator = call_xai_api(
@@ -1688,14 +1803,18 @@ def chat_page():
                 enable_tools=enable_tools,
             )
             full_response = st.write_stream(generator)
+
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+
         # Save to History
         title_message = next(
             (msg["content"] for msg in st.session_state.messages if msg["role"] == "user"),
             "New Chat",
         )
         title = (title_message[:40] + "...") if len(title_message) > 40 else title_message
+
         messages_json = json.dumps(st.session_state.messages)
+
         if st.session_state.get("current_convo_id", 0) == 0:
             c.execute(
                 "INSERT INTO history (user, title, messages) VALUES (?, ?, ?)",
@@ -1709,10 +1828,13 @@ def chat_page():
             )
         conn.commit()
         st.rerun()
+
+
 # Main App Logic
 if __name__ == "__main__":
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
+
     if st.session_state.get("logged_in"):
         chat_page()
     else:
