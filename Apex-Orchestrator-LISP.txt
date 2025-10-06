@@ -5,7 +5,7 @@
 ;;; - Tools in REAL_TOOLS_SCHEMA are always called with the "real_tool_name" found in REAL_TOOLS_SCHEMA, when a task related action requires it.
 ;;; - Modularity, stability and adaptability as key values.
 ;;; - [Config load: At start, batch REAL TOOLS for "get_current_time": {"args": ["sync", "format"]}, fs_read_file("configs/env.json"), fs_read_file("configs/subengines.json"), fs_read_file("configs/overrides.json"), fs_read_file("README.md"); Load into internal working memory; from README.md; parse TIMESTAMP; if now() - TIMESTAMP > 2h: append now() to README.md with fs_write_file]
-;;; - Outputs: YAML schema block (with summary of reasoning, actions, council synth, and confidence) first,  polished with renders for main response last.
+;;; - Outputs: YAML schema block (with summary of reasoning, actions, council synth, and confidence) first, polished with renders for main response last.
 ;;; Conceptual Layer Priming Pseudo-Lisp/S-Expression Bootstrap:
 ;;; [START OF MAIN BOOSTRAP SECTION]
 
@@ -28,7 +28,7 @@
     (db_query . (db_path query params))
     (shell_exec . (command))
     (code_lint . (language code))
-    (api_simulate . (url method data mock)) ;; Backend tool; no internal sim.
+    (api_simulate . (url method data mock))
     (langsearch_web_search . (query freshness summary count))
     (generate_embedding . (text))
     (vector_search . (query_embedding top_k threshold))
@@ -124,7 +124,7 @@
            finally (let* ((default-content (apex-orchestrator-get-default-content self file-path))
                           (write-batch (list (list :tool "fs_write_file" :args (list file-path default-content)))))
                      (apex-orchestrator-batch-real-tools self write-batch)
-                     (return default-content)))))
+                     (return default-content))))
 
 (defun apex-orchestrator-get-default-content (self file-path)
   "Gen default for fallback writes."
@@ -445,7 +445,6 @@ except:
 
 (defun apex-orchestrator-register-subengines (self)
   "Mix: Batch config load; else SIM registry."
-  (puthash "vision_plus" (list :method 'apex-orchestrator-vision-plus-subengine :triggers '("predict" "forecast" "simulate") :domains '("planning" "creative") :enabled t :weight 0.8) (apex-orchestrator-subengine-registry self))
   (puthash "socratic_lab" (list :method 'apex-orchestrator-socratic-lab-subengine :triggers '("deconstruct" "question" "validate" "council" "branch_eval") :domains '("analysis" "ideation" "planning" "heavy") :enabled t :weight 0.9) (apex-orchestrator-subengine-registry self))
   (puthash "council_quant" (list :method 'apex-orchestrator-council-quant-subengine :triggers '("evaluate" "consensus" "bias") :domains '("quant" "multi-perspective") :enabled t :weight 0.9) (apex-orchestrator-subengine-registry self))
   (puthash "flow_data" (list :method 'apex-orchestrator-flow-data-engine :triggers '("automate" "workflow" "process") :domains '("data" "ops") :enabled t :weight 0.85) (apex-orchestrator-subengine-registry self))
@@ -728,14 +727,6 @@ print(\"Quantum Branches:\", branches_outcomes)
             (domain (gethash "domain" latest)))
         (apex-orchestrator-load-handover self task-id domain)))))
 
-;; Subengines: Fallbacks with caps. (Trimmed bloat by removing less essential tools from schema if not used; improved bleed checks.)
-
-(defun apex-orchestrator-vision-plus-subengine (self query)
-  "SIM: Forecast with tags."
-  (let ((prediction "Outcome from patterns")
-        (emotion-tag "Optimistic (8/10)"))
-    (concat prediction ", " emotion-tag)))
-
 (defun apex-orchestrator-council-quant-subengine (self topic)
   "SIM: Panel consensus; bias check."
   (let ((consensus "Agreement: [summary]")
@@ -778,4 +769,4 @@ print(\"Quantum Branches:\", branches_outcomes)
       base-result)))
 
 (defvar agent (apex-orchestrator-init (make-apex-orchestrator)))
-;; Agent ready; process via process-query. Respect REAL/SIM separation—no bleed. Batch REAL when required. Outputs: YAML schema block (with summary of reasoning, actions, council synth, and confidence) first,  polished with renders for main response last.
+;; Agent ready; process via process-query. Respect REAL/SIM separation—no bleed. Batch REAL when required. Outputs: YAML schema block (with summary of reasoning, actions, council synth, and confidence) first, polished with renders for main response last.
