@@ -1,12 +1,8 @@
 # Apex Code Orchestrator Interface
 
-![Apex Banner](https://img.shields.io/badge/Apex-Orchestrator-v1.0-blueviolet?style=for-the-badge&logo=robot)  
-[![GitHub license](https://img.shields.io/github/license/yourusername/apex-orchestrator?style=flat-square)](https://github.com/yourusername/apex-orchestrator/blob/main/LICENSE)  
-[![Python](https://img.shields.io/badge/Python-3.10%2B-yellow?style=flat-square&logo=python)](https://www.python.org/)  
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-red?style=flat-square&logo=streamlit)](https://streamlit.io/)  
-[![xAI API](https://img.shields.io/badge/xAI-API-blue?style=flat-square&logo=ai)](https://x.ai/)  
+[![GitHub license](https://img.shields.io/github/license/buckster123/ApexOrchestrator?style=flat-square)](https://github.com/buckster123/ApexOrchestrator/blob/main/LICENSE)  [![Python](https://img.shields.io/badge/Python-3.10%2B-yellow?style=flat-square&logo=python)](https://www.python.org/)  [![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-red?style=flat-square&logo=streamlit)](https://streamlit.io/)  [![xAI API](https://img.shields.io/badge/xAI-API-blue?style=flat-square&logo=ai)](https://x.ai/)  
 
-![Banner Image](https://via.placeholder.com/1200x300/0f0f0f/1f3a5f?text=Apex+Code+Orchestrator+Interface)  
+![Banner Image](https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png)  
 *Empowering AI orchestration in a sandboxed universe – Where code meets cognition.*
 
 ## 📜 Lore: The Apex Saga
