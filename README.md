@@ -1,4 +1,4 @@
-# Apex Code Orchestrator Interface
+# Apex Orchestrator Interface
 
 [![GitHub license](https://img.shields.io/github/license/buckster123/ApexOrchestrator?style=flat-square)](https://github.com/buckster123/ApexOrchestrator/blob/main/LICENSE)  [![Python](https://img.shields.io/badge/Python-3.10%2B-yellow?style=flat-square&logo=python)](https://www.python.org/)  [![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-red?style=flat-square&logo=streamlit)](https://streamlit.io/)  [![xAI API](https://img.shields.io/badge/xAI-API-blue?style=flat-square&logo=ai)](https://x.ai/)  
 
