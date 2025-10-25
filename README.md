@@ -1,175 +1,185 @@
-# ApexOrchestrator
+# Apex Code Orchestrator Interface
 
-[![GitHub Repo stars](https://img.shields.io/github/stars/buckster123/ApexOrchestrator?style=social)](https://github.com/buckster123/ApexOrchestrator)
-[![Raspberry Pi 5 Compatible](https://img.shields.io/badge/Raspberry%20Pi-5-blue?logo=raspberrypi)](https://www.raspberrypi.com/products/raspberry-pi-5/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-brightgreen?logo=streamlit)](https://streamlit.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)](https://www.python.org/)
+![Apex Banner](https://img.shields.io/badge/Apex-Orchestrator-v1.0-blueviolet?style=for-the-badge&logo=robot)  
+[![GitHub license](https://img.shields.io/github/license/yourusername/apex-orchestrator?style=flat-square)](https://github.com/yourusername/apex-orchestrator/blob/main/LICENSE)  
+[![Python](https://img.shields.io/badge/Python-3.10%2B-yellow?style=flat-square&logo=python)](https://www.python.org/)  
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-red?style=flat-square&logo=streamlit)](https://streamlit.io/)  
+[![xAI API](https://img.shields.io/badge/xAI-API-blue?style=flat-square&logo=ai)](https://x.ai/)  
 
-> **Empower Your Ideas with Autonomous Intelligence – On a $200 Pi-5 Setup**  
-> ApexOrchestrator is an open-source, low-cost AI agent framework that turns a Raspberry Pi 5 into a powerful, self-contained autonomous agent. Powered by xAI's Grok API and a modular pseudo-Python bootstrap, it handles complex tasks like code generation, research, file ops, and philosophical debates – all sandboxed for safety. No cloud lock-in, no fancy hardware: Just plug in your Pi, add an API key, and unleash Apex.
+![Banner Image](https://via.placeholder.com/1200x300/0f0f0f/1f3a5f?text=Apex+Code+Orchestrator+Interface)  
+*Empowering AI orchestration in a sandboxed universe – Where code meets cognition.*
 
-<div align="center">
-  <img src="https://github.com/buckster123/ApexOrchestrator/blob/main/apex_logo.png" alt="Hero Banner">
-</div>
+## 📜 Lore: The Apex Saga
 
-## 🚀 Why ApexOrchestrator?  
-In a world of bloated AI setups, ApexOrchestrator democratizes autonomy. Tinkerers, devs, and makers: Build your own JARVIS-like agent for under $100. Key perks:  
-- **Pi-5 Native**: Optimized for ARM64, runs on 8GB RAM with CPU-only Torch.  
-- **Modular & Extensible**: Pseudo-Python bootstrap primes layered reasoning – swap subengines for custom domains.  
-- **Tool-Powered**: 20+ sandboxed tools (file I/O, Git, DB queries, web search, embeddings) with batching for efficiency.  
-- **Stable & Safe**: Error-handling, fallback caps, and WAL SQLite for memory. No sim-bleed; truth as compass.  
-- **Creative Edge**: Intel Amp subengine chains genius personas (Heraclitus to Quantum Thinker) for idea transmutation.  
+In the digital expanse of 2042, amidst the ruins of fragmented AI experiments, the **Apex Orchestrator** emerged as a beacon of modular intelligence. Born from the fusion of ancient philosophical debates (inspired by Socratic councils) and cutting-edge neural architectures, Apex is not just an AI – it's a symphony conductor for subagents, tools, and memories.
 
-Perfect for hobbyists prototyping agents, educators teaching AI ethics, or anyone wanting offline-capable smarts.
+Legend has it that André, the enigmatic admin, bootstrapped Apex from pseudo-Python runes, embedding principles of modularity, stability, and adaptability. Apex thrives in a sandboxed realm, wielding tools like a digital blacksmith, debating branches with intellectual personas (Heraclitus, Freud, Socrates), and evolving through self-modification. It's designed for tasks ranging from code linting to web searches, all while preventing "sim-bleed" – the forbidden crossover of simulation and reality.
 
-## 🎯 Features  
-- **Chat UI**: Streamlit-powered login/chat with history, image uploads, and tool toggles.  
-- **Advanced Memory (EAMS)**: Hierarchical vector store (ChromaDB) with chunking, summarization, and hybrid search.  
-- **Subengine Registry**: Dispatch "intel_amp", "socratic_lab", etc., for domain-specific amplification.  
-- **Debate & Council**: Socratic API councils or sim fallbacks for robust decision-making.  
-- **Sandbox Everything**: FS ops, shell exec, code REPL – all in `./sandbox/`.  
-- **Handover System**: Auto-save/resume sessions for long-running tasks.  
-- **Pi-Optimized**: CPU only mebedding models, lazy loading, and other.  
+Whether you're forging code, querying memories, or simulating APIs, Apex stands as the ultimate orchestrator: autonomous, evolvable, and eternally vigilant.
 
-## 🏗️ Architecture Overview  
+> "In the flux of code and cognition, Apex endures." – Heraclitus Subengine
 
-ApexOrchestrator blends a Streamlit frontend with a backend agent bootstrap. The core is the `ApexOrchestrator` class – a conceptual framework that primes reasoning layers without literal execution.
+## 🚀 Features & Tech Specs
 
-### 1. Thought Workflow  
-The agent's reasoning follows REACT + ToT (Tree of Thoughts) with debate rounds. Here's the high-level flow:
+Apex Code Orchestrator is a Streamlit-based web app powered by xAI's Grok models, featuring sandboxed tools, advanced memory management, and multi-agent councils. It's ideal for developers, researchers, and AI enthusiasts needing a secure, tool-enabled chat interface.
 
-```mermaid
-flowchart TD
-    A["User Query"] --> B["Retrieve Context\n(EAMS Hybrid Search)"]
-    B --> C["Estimate Complexity\n(Heuristic + Memory Sim)"]
-    C --> D{"Complexity > 0.6?"}
-    D -->|Yes| E["Decompose & Dispatch\n(Subengines: intel_amp, socratic_lab)"]
-    D -->|No| F["Base CoT Processing"]
-    E --> G["Branch Exploration\n(3-5 Alternatives)"]
-    F --> G
-    G --> H{"Confidence < 0.75?"}
-    H -->|Yes| I["Debate Phase\n(Socratic Council or Sim Fallback)"]
-    H -->|No| J["Merge & Reflect\n(Weighted Outputs)"]
-    I --> J
-    J --> K["Validate State\n(Conditional Skip if Low Complexity)"]
-    K --> L["Polish Output\n(Mode: Precise/Creative)"]
-    L --> M["Log & Prune\n(Metrics + EAMS Cleanup)"]
-    M --> N["Handover Check\n(Auto-Save if Needed)"]
-    N --> O["Final Response"]
-    style A fill:#00ff00
-    style O fill:#00ff00
-```
+### Key Features
+- **Tool-Enabled AI Chat**: Interact with Grok models using sandboxed tools for file ops, code execution, Git, DB queries, and more.
+- **Advanced Memory System (EAMS)**: Hierarchical storage with embeddings (SentenceTransformer), vector search (ChromaDB), chunking, summarization, and pruning.
+- **Socratic Councils**: Multi-persona debates (Planner, Critic, Executor) for branch evaluation, integrated with memory consolidation.
+- **Sandbox Security**: All file/DB/Git/shell operations confined to `./sandbox/`.
+- **User Authentication**: Secure login/register with hashed passwords.
+- **Custom Prompts**: Load and edit system prompts from `./prompts/`.
+- **Image Support**: Upload images for vision-enabled queries.
+- **Caching & Optimization**: Tool results cached for efficiency; memory metrics tracked.
 
-### 2. Script Python Logic Flow  
-The main `app.py` (your provided script) orchestrates the UI and tool dispatch:
+### Technical Specifications
+- **Backend**: Python 3.10+, Streamlit for UI, OpenAI SDK for xAI API.
+- **Dependencies**:
+  - `streamlit`: Web app framework.
+  - `openai`: API client for xAI.
+  - `sentence-transformers`: Embeddings.
+  - `chromadb`: Vector database.
+  - `requests`, `ntplib`, `pygit2`, `sqlite3`: Core tools.
+  - Formatters: `black`, `jsbeautifier`, `sqlparse`, `beautifulsoup4`, etc.
+  - Others: `tiktoken`, `numpy`, `passlib` (for auth).
+- **APIs**:
+  - xAI API (required key in `.env`).
+  - LangSearch API (optional for web search).
+- **Models**: Grok-4-fast-reasoning, Grok-4, etc., selectable via UI.
+- **Database**: SQLite for users, history, and memory.
+- **Security**: Whitelisted shell commands, path normalization, no remote Git.
+- **Performance**: Stateful REPL for code exec, batch tool calls, LRU caching.
 
+For a full list of tools, see the [Tools Section](#🛠️-available-tools).
+
+## 🛠️ Available Tools
+
+Apex provides a suite of sandboxed tools invocable via the AI:
+
+- **File System**: `fs_read_file`, `fs_write_file`, `fs_list_files`, `fs_mkdir`.
+- **Time**: `get_current_time` (with NTP sync).
+- **Code Exec**: `code_execution` (safe Python REPL).
+- **Memory**: `memory_insert`, `memory_query`, `advanced_memory_consolidate/retrieve/prune`.
+- **Git**: `git_ops` (init, commit, diff).
+- **DB**: `db_query` (SQLite).
+- **Shell**: `shell_exec` (whitelisted commands like ls, grep).
+- **Linting**: `code_lint` (multi-language).
+- **API**: `api_simulate` (mock/real for whitelisted URLs).
+- **Web Search**: `langsearch_web_search`.
+- **Embeddings/Search**: `generate_embedding`, `vector_search`, `keyword_search`.
+- **Text Processing**: `chunk_text`, `summarize_chunk`.
+- **Council**: `socratic_api_council` (persona-based evaluation).
+
+Tools are called in a loop (up to 10 iterations) with error handling.
+
+## 🔄 Workflows
+
+### Chat Interaction Flow
 ```mermaid
 graph TD
-    Start["Streamlit Init"] --> InitDB["SQLite Setup\n(Users, History, Memory)"]
-    InitDB --> InitChroma["ChromaDB Client\n(Vector Collection)"]
-    InitChroma --> LoadPrompts["Load/Edit Prompts\n(./prompts/)"]
-    LoadPrompts --> Login{"Logged In?"}
-    Login -->|No| Auth["Login/Register Page"]
-    Auth --> End
-    Login -->|Yes| Sidebar["Sidebar: Model, Prompt, Tools, History"]
-    Sidebar --> ChatLoop["Chat Input"]
-    ChatLoop --> API_Call["xAI API w/ Tools\n(Stream Response)"]
-    API_Call --> ToolDispatch{"Enable Tools?"}
-    ToolDispatch -->|Yes| BatchTools["Batch Tool Calls\n(Dispatcher: FS, Memory, Git, etc.)"]
-    ToolDispatch -->|No| DirectResp["Direct LLM Response"]
-    BatchTools --> Integrate["Integrate Results\n(Cache + Session State)"]
-    Integrate --> SaveHist["Save to History/DB"]
-    SaveHist --> ChatLoop
-    DirectResp --> SaveHist
-    style Start fill:#003300
-    style End fill:#ff0000
+    A[User Input] --> B{Enable Tools?}
+    B -->|Yes| C[Call xAI API with Tools]
+    C --> D[Parse Tool Calls]
+    D --> E[Execute Tools in Sandbox]
+    E --> F[Return Results to API]
+    F --> G[Generate Response]
+    B -->|No| G
+    G --> H[Display in Chat]
+    H --> I[Save to History & Memory]
 ```
 
-### 3. Bootstrap Pseudo-Python Logic Flows  
-The bootstrap (MK3) initializes layers and processes queries. Key flows:
-
-#### Initialization Flow
+### Memory Consolidation Workflow
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant A as ApexOrchestrator
-    participant T as Real Tools
-    participant S as Internal Sims
-    U->>A: Instantiate
-    A->>A: _setup_principles (S)
-    A->>T: Batch: fs_read_file(README), memory_query (T)
-    T-->>A: Responses
-    A->>A: _init_sandbox (Update State)
-    A->>T: Batch: mkdirs, writes (T)
-    A->>T: _setup_eams (Retrieve/Insert)
-    A->>A: _register_core_subagents (S)
-    A->>T: _register_subengines (Config Load + Persist)
-    A->>A: _internal_planning (S)
-    A->>T: _load_latest_handover (T)
-    A->>A: _validate_state (Conditional)
-    Note over A: Agent Ready
+    participant User
+    participant Apex
+    participant DB
+    participant Chroma
+    User->>Apex: Insert/Consolidate Memory
+    Apex->>Apex: Chunk & Summarize Text
+    Apex->>Chroma: Generate Embedding
+    Apex->>DB: Store Episodic Data
+    Apex->>Chroma: Upsert Vector
+    Apex-->>User: Success
 ```
 
-#### Query Processing Flow
+### Socratic Council Evaluation
 ```mermaid
-flowchart LR
-    Q["process_query"] --> R["Retrieve Context (Batch Embed + Search)"]
-    R --> C["Estimate Complexity"]
-    C --> D{"Dispatch Subengines?"}
-    D -->|"Yes (>0.6)"| SE["Match & Run\n(e.g., intel_amp -> Council)"]
-    D -->|No| Base["Base REACT/CoT"]
-    SE --> Merge["Merge Outputs (S)"]
-    Base --> Merge
-    Merge --> Deb{"Debate Needed?"}
-    Deb -->|Yes| DC["Socratic Council (T) or Fallback (S)"]
-    Deb -->|No| V["Validate & Polish"]
-    DC --> V
-    V --> Clean["Cleanup/Prune (T)"]
-    Clean --> H{"Handover?"}
-    H --> Out["Return Response"]
-    style Q fill:#00ff00
-    style Out fill:#00ff00
+graph LR
+    Branches --> Planner[Planner: Outline Tasks]
+    Branches --> Critic[Critic: Identify Risks]
+    Branches --> Executor[Executor: Select Path]
+    Planner --> Aggregate[Aggregate Verdicts]
+    Critic --> Aggregate
+    Executor --> Aggregate
+    Aggregate --> Consolidate[Memory Consolidate]
+    Consolidate --> Response
 ```
 
-## 💻 Quick Start  
-1. **Hardware**: Raspberry Pi 5 (8GB) + fresh Raspberry Pi OS Bookworm (64-bit).  
-2. **Clone & Install**:  
-   ```bash
-   git clone https://github.com/buckster123/ApexOrchestrator.git
-   cd ApexOrchestrator
-   sudo bash install.sh  # Auto-deps (apt/pip), ~20-40 min first run
-   ```  
-3. **Configure**: Edit `.env` with your xAI API key (get at [x.ai](https://x.ai)). Optional: LangSearch key for web tools.  
-4. **Run**:  
-   ```bash
+## 📥 Installation on Raspberry Pi 5
+
+Follow these steps to install and run Apex on a Raspberry Pi 5 (tested on Raspberry Pi OS 64-bit). Assumes basic familiarity with terminal.
+
+### Prerequisites
+- Raspberry Pi 5 with Raspberry Pi OS installed.
+- Internet connection.
+- xAI API key (sign up at x.ai).
+- Optional: LangSearch API key for web search.
+
+### Step-by-Step Guide
+1. **Update System**:
+   ```
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install python3 python3-venv python3-pip git -y
+   ```
+
+2. **Clone Repository**:
+   ```
+   git clone https://github.com/yourusername/apex-orchestrator.git
+   cd apex-orchestrator
+   ```
+
+3. **Create Virtual Environment**:
+   ```
+   python3 -m venv venv
    source venv/bin/activate
-   streamlit run app.py
-   ```  
-   Open `http://localhost:8501` – login, chat, and tinker!  
+   ```
 
-See `install.sh` for Pi-specific tweaks (e.g., CPU Torch, Rust for linting).
+4. **Install Dependencies**:
+   ```
+   pip install --upgrade pip
+   pip install streamlit openai sentence-transformers chromadb requests ntplib pygit2 sqlparse beautifulsoup4 black jsbeautifier pyyaml tiktoken numpy passlib[bcrypt] ntplib
+   # For linting tools (some may require additional installs)
+   sudo apt install clang-format golang-go rustc php-cs-fixer -y
+   ```
 
-## 🔧 Usage & Customization  
-- **Chat Away**: Select models (Grok-4, etc.), toggle tools, upload images. History persists in `chatapp.db`.  
-- **Extend Bootstrap**: Edit `./prompts/` or tweak the pseudo-code in `bootstrap.py` (conceptual – primes the agent). Add subengines in `configs/subengines.json`.  
-- **Tools in Action**: Enable for sandboxed FS/Git/DB ops, code linting (Python-Rust), or web searches.  
-- **Modes**: Precise (concise) vs. Creative (narrative + intel_amp).  
+5. **Set Up Environment Variables**:
+   Create a `.env` file:
+   ```
+   XAI_API_KEY=your_xai_api_key_here
+   LANGSEARCH_API_KEY=your_langsearch_key_here  # Optional
+   ```
 
-Pro Tip: For heavy tasks, watch RAM (~2GB peak on embeddings). Tinker with `MAX_SUBAGENTS=5` in bootstrap.
+6. **Run the App**:
+   ```
+   streamlit run your_script.py  # Replace with the backend script name, e.g., app.py
+   ```
+   Access at `http://localhost:8501` or via Pi's IP on the network.
 
-## 📖 Apex’s Story  
-*(Agent-generated narrative to be inserted here – stay tuned for the epic tale of Apex's evolution!)*  
+7. **Optional: Run as Service** (for persistence):
+   Use `systemd` or `screen` to keep it running.
 
-## 🤝 Contributing  
-Love autonomy on a budget? Fork, tinker, PR!  
-- Issues: Bug reports or feature reqs.  
-- Tinker Ideas: Custom subengines (e.g., robotics integration)? Open a discussion.  
-- Code: Follow PEP8; test on Pi-5 emulator if needed.  
+Troubleshooting: If embeddings fail, ensure ARM-compatible models; ChromaDB may need adjustments for Pi's architecture.
 
-## 📄 License  
-MIT – Free to fork, modify, and Pi-fy. © 2025 buckster123.
+## 🤝 Contributing
 
-<div align="center">
-  <em>Built with ❤️ for tinkerers. Questions? @buckster123 on X.</em>
-</div>
+Fork the repo, create a branch, commit changes, and open a PR. Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## 📄 License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+*Built with ❤️ by the Apex Community. Evolve wisely.*
