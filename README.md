@@ -17,7 +17,7 @@ Whether you're forging code, querying memories, or simulating APIs, Apex stands 
 
 ## 🚀 Features & Tech Specs
 
-Apex Code Orchestrator is a Streamlit-based web app powered by xAI's Grok models, featuring sandboxed tools, advanced memory management, and multi-agent councils. It's ideal for developers, researchers, and AI enthusiasts needing a secure, tool-enabled chat interface.
+Apex Orchestrator is a Streamlit-based web app powered by xAI's Grok models, featuring sandboxed tools, advanced memory management, and multi-agent councils. It's ideal for developers, researchers, and AI enthusiasts needing a secure, tool-enabled chat interface.
 
 ### Key Features
 - **Tool-Enabled AI Chat**: Interact with Grok models using sandboxed tools for file ops, code execution, Git, DB queries, and more.
