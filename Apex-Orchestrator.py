@@ -136,36 +136,36 @@ os.makedirs(SANDBOX_DIR, exist_ok=True)
 st.markdown(
     """<style>
 body {
-    background: linear-gradient(to right, #0f0f0f, #1f3a5f);
-    color: #a0b8d8;
+    background: linear-gradient(to right, #000000, #003300);
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 .stApp {
-    background: linear-gradient(to right, #0f0f0f, #1f3a5f);
+    background: linear-gradient(to right, #000000, #003300);
     display: flex;
     flex-direction: column;
-    color: #a0b8d8;
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 .sidebar .sidebar-content {
-    background: rgba(15, 30, 60, 0.5);
+    background: rgba(0, 51, 0, 0.5);
     border-radius: 10px;
-    color: #a0b8d8;
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 .stButton > button {
-    background-color: #4d88d3;
-    color: #ffffff;
+    background-color: #00ff00;
+    color: #000000;
     border-radius: 10px;
     border: none;
     font-family: 'Courier New', monospace;
 }
 .stButton > button:hover {
-    background-color: #3d78c3;
+    background-color: #00cc00;
 }
 [data-theme="dark"] .stApp {
-    background: linear-gradient(to right, #0f0f0f, #1f3a5f);
-    color: #a0b8d8;
+    background: linear-gradient(to right, #000000, #003300);
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 </style>
@@ -935,15 +935,15 @@ def socratic_api_council(
     personas = [
         {
             "name": "Planner",
-            "prompt": "As Planner in a socratic multi-agent system, outline feasible tasks from these branches: {branches}. Prioritize actionable paths.",
+            "prompt": "As Planner, outline feasible tasks from these branches: {branches}. Prioritize actionable paths.",
         },
         {
             "name": "Critic",
-            "prompt": "As Critic in a socratic multi-agent system, identify risks and flaws in these branches: {branches}. Flag potential errors or loops.",
+            "prompt": "As Critic, identify risks and flaws in these branches: {branches}. Flag potential errors or loops.",
         },
         {
             "name": "Executor",
-            "prompt": "As Executor in a socratic multi-agent system, select the safest branch to execute from: {branches}. Focus on tool utilization and stability.",
+            "prompt": "As Executor, select the safest branch to execute from: {branches}. Focus on tool utilization and stability.",
         },
     ]
     verdicts = []
@@ -1556,7 +1556,7 @@ def call_xai_api(
     return generate(api_messages)
 # Login Page
 def login_page():
-    st.title("Welcome to The Apex Code Orchestrator Interface")
+    st.title("Welcome to The Apex Orchestrator Interface")
     tab1, tab2 = st.tabs(["Login", "Register"])
     with tab1:
         with st.form("login_form"):
@@ -1608,7 +1608,7 @@ def delete_history(convo_id):
         st.session_state["current_convo_id"] = 0
     st.rerun()
 def chat_page():
-    st.title(f"Apex Code Chat - {st.session_state['user']}")
+    st.title(f"Apex Chat - {st.session_state['user']}")
     # --- Sidebar UI ---
     with st.sidebar:
         st.header("Chat Settings")
