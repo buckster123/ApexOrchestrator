@@ -83,19 +83,19 @@ The core script is a Streamlit app for user interaction:
 graph TD
     A[User Login/Register] --> B{Authenticated?}
     B -->|Yes| C[Select Model/Prompt/Enable Tools]
-    C --> D[Upload Images Optional]
+    C --> D["Upload Images (Optional)"]
     D --> E[Chat Input]
-    E --> F[Build API Messages (System + History + Images)]
+    E --> F["Build API Messages (System + History + Images)"]
     F --> G{Tools Enabled?}
     G -->|Yes| H[Call xAI API with Tools]
     H --> I[Parse Tool Calls]
-    I --> J[Execute Tools in Sandbox (Batch)]
+    I --> J["Execute Tools in Sandbox (Batch)"]
     J --> K[Return Results to API]
     K --> L[Generate/Stream Response]
     G -->|No| L
     L --> M[Display in Chat]
     M --> N[Save to History & Memory]
-    N --> O[Optional: Prune/Consolidate Memory]
+    N --> O["Optional: Prune/Consolidate Memory"]
 ```
 
 ### Agent Bootstrapping & Logic
