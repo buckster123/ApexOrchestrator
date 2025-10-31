@@ -1,3 +1,4 @@
+```
 # ApexOrchestrator: Advanced Multi-Agent AI Orchestration Framework
 
 [![GitHub License](https://img.shields.io/github/license/buckster123/ApexOrchestrator?style=flat-square)](https://github.com/buckster123/ApexOrchestrator/blob/main/LICENSE) [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/) [![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-ff4b4b?style=flat-square&logo=streamlit)](https://streamlit.io/) [![xAI API](https://img.shields.io/badge/xAI-API-3776AB?style=flat-square&logo=ai)](https://x.ai/) [![Docker](https://img.shields.io/badge/Docker-Support-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
@@ -97,3 +98,160 @@ graph TD
     L --> M[Render in Interface]
     M --> N[Persist to Archives & Vectors]
     N --> O[Adaptive Memory Optimization]
+```
+
+### Agent Initialization & Cognitive Protocols
+Agents instantiated via YAML-anchored pseudo-code in `.txt` archetypes. Upon prompt selection, the AI embodies the persona, leveraging `process_query` for task orchestration.
+- **Encapsulation Doctrine**: Bifurcation of REAL tools (batched externalities) and SIM functions (endogenous logic, bleed-proof).
+- **Bootstrap Cascade**: Configuration ingestion, principle instantiation, sandbox delineation, EAMS initialization, sub-agent registration, evolutionary module loading, layer/swarm activation.
+- **Task Fractalization**: SIM `_decompose_query` for subtask partitioning; complexity heuristics for layer routing (reactive vs. deliberative).
+- **Swarm Dialectics**: On-demand agent spawning (e.g., Analyst, Synthesizer, Verifier); consensus via `socratic_api_council`.
+- **Iterative Evolution**: Uncertainty-gated retries, debates, refinements; post-hoc pruning.
+
+#### ApexCoder Protocol (Synthesis & Verification Focus)
+Tailored for algorithmic craftsmanship, test-driven evolution, vulnerability mitigation, documentation augmentation, and performance amplification.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant ApexCoder
+    participant Arsenal
+    participant Hive
+    User->>ApexCoder: Synthesis Directive
+    ApexCoder->>ApexCoder: Heuristic Complexity Assessment (SIM)
+    ApexCoder->>ApexCoder: Task Fractalization (SIM _decompose_coding_task)
+    ApexCoder->>ApexCoder: Isolation Validation (SIM)
+    ApexCoder->>Hive: Spawn Dialectical Nodes (Analyst, Synthesizer, Verifier)
+    Hive->>Arsenal: Batched Invocations (code_execution, code_lint)
+    Arsenal-->>Hive: Empirical Feedback
+    Hive->>ApexCoder: Output Fusion (SIM _merge_code_outputs)
+    ApexCoder->>ApexCoder: Entropy Evaluation (SIM)
+    ApexCoder->>ApexCoder: Dialectical Escalation if Entropic (socratic_api_council)
+    ApexCoder->>ApexCoder: Evolutionary Refinement (SIM _self_reflect)
+    ApexCoder->>Arsenal: Entropy Reduction (advanced_memory_prune)
+    ApexCoder-->>User: Optimized Artifact Delivery
+```
+
+#### ApexOrchestrator Protocol (Meta-Coordination & Swarm Dynamics)
+Optimized for holistic orchestration, inferential synthesis, and distributed cognition.
+
+```mermaid
+graph LR
+    Input --> Fractalize[SIM _decompose_query]
+    Fractalize --> Assess[Complexity Heuristics]
+    Assess --> Router{Entropy > 0.8?}
+    Router -->|Elevated| Deliberative[Engage Deliberative Layer: swarm_synthesis, dialectical_lab]
+    Router -->|Nominal| Reactive[Engage Reactive Layer: quantitative_council, amplification_intel]
+    Deliberative --> Aggregates
+    Reactive --> Aggregates
+    Aggregates --> Fuse[SIM _merge_outputs]
+    Fuse --> Entropy[SIM _assess_uncertainty]
+    Entropy --> Threshold{> Dialectic Limit?}
+    Threshold -->|Affirmative| Dialectic[socratic_api_council Debate]
+    Dialectic --> Evolve
+    Threshold -->|Negative| Evolve[SIM evolutionary_refine]
+    Evolve --> Purge[REAL entropy_prune]
+    Purge --> Output
+```
+
+#### CosmicCore Protocol (Pillar-Equilibrated Cognition)
+Rooted in Stellar Arbor epistemology; endogenous sub-agents (Nova Genesis, Quantum Insight, Neural Discern) for rapid simulation; exogenous via dialectical councils.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CosmicCore
+    participant Endogenous[Endogenous Nodes]
+    participant Exogenous[Exogenous Nodes]
+    participant Dialectic
+    User->>CosmicCore: Inferential Query
+    CosmicCore->>CosmicCore: Fractal Decomposition (SIM _decompose_query)
+    CosmicCore->>Endogenous: Activate Pillars (Nova Genesis, Quantum Insight, Neural Discern)
+    Endogenous-->>CosmicCore: Preliminary Syntheses
+    CosmicCore->>CosmicCore: Complexity Calibration
+    alt Calibration > Delegation Horizon
+        CosmicCore->>Exogenous: Orchestrate Extensions (Galactic Flow, et al.)
+        Exogenous-->>CosmicCore: Augmented Syntheses
+    end
+    CosmicCore->>CosmicCore: Fusion Cascade (SIM _merge_outputs)
+    CosmicCore->>Dialectic: Equilibration Phase (socratic_api_council)
+    Dialectic-->>CosmicCore: Harmonized Equilibrium
+    CosmicCore->>CosmicCore: Validation & Entropy Minimization
+    CosmicCore-->>User: Equilibrated Response
+```
+
+## 🛠️ Deployment on Raspberry Pi 5 (Debian Bookworm)
+
+Validated on Raspberry Pi OS (64-bit Bookworm). Presumes CLI proficiency.
+
+### Foundational Requirements
+- Raspberry Pi 5 with Bookworm deployment.
+- Network connectivity.
+- xAI API credentials; optional LangSearch integration.
+
+### Deployment Protocol (Manual)
+1. **System Synchronization & Toolchain Installation**:
+   ```
+   sudo apt update && sudo apt full-upgrade -y
+   sudo apt install -y build-essential python3-dev python3-pip python3-venv libgit2-dev libatlas-base-dev clang-format golang-go rustc cargo php-cli curl php-cs-fixer
+   ```
+   For php-cs-fixer fallback:
+   ```
+   curl -sS https://getcomposer.org/installer | php
+   php composer.phar global require friendsofphp/php-cs-fixer
+   ```
+
+2. **Repository Acquisition**:
+   ```
+   git clone https://github.com/buckster123/ApexOrchestrator.git
+   cd ApexOrchestrator
+   ```
+
+3. **Virtual Environment Genesis**:
+   ```
+   rm -rf venv  # Irreversible: eradicates prior environments
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+4. **Package Manager Elevation**:
+   ```
+   pip install --upgrade pip wheel
+   ```
+
+5. **Dependency Resolution**:
+   ```
+   pip install python-dotenv beautifulsoup4 black openai passlib sentence-transformers chromadb jsbeautifier ntplib numpy pygit2 requests sqlparse streamlit tiktoken pyyaml tqdm ecdsa scipy pandas matplotlib sympy mpmath statsmodels PuLP astropy qutip control biopython pubchempy dendropy rdkit pyscf pygame chess mido midiutil networkx torch python-snappy
+   ```
+
+6. **Environmental Configuration**:
+   Instantiate `.env`:
+   ```
+   XAI_API_KEY=your_credential
+   LANGSEARCH_API_KEY=optional_credential
+   ```
+
+7. **Activation**:
+   ```
+   streamlit run chat_mk3.py
+   ```
+   Interface accessible at `http://localhost:8501` or device IP.
+
+8. **Persistence Orchestration (Optional)**: Leverage systemd for daemonization.
+
+Diagnostics: Ensure ARM compatibility for embeddings/torch; tune ChromaDB for edge constraints. For protracted compilations (e.g., rdkit/pyscf), employ `--no-binary` flags on failures.
+
+**Agent Isolation Mandate**: Instantiate discrete venvs (e.g., `python3 -m venv venv-apexcoder`), provision dependencies, and execute agents autonomously to avert state convergence.
+
+## 🌐 Contribution Ecosystem
+
+Fork the repository, branch innovatively, commit atomically, and submit pull requests. Adhere to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## 📜 Licensing Framework
+
+MIT License. Consult [LICENSE](LICENSE).
+
+---
+
+*Forged in the crucible of collective intelligence by the Apex Collective. Ascend through symbiosis.*
+```
