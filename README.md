@@ -187,11 +187,16 @@ Tested on Raspberry Pi OS (Bookworm 64-bit). Assumes terminal familiarity.
 - Internet.
 - xAI API key (x.ai); optional LangSearch key.
 
-### Step-by-Step (or use install.sh)
-1. **Update System**:
+### Step-by-Step (Manual Install)
+1. **Update System & Install Deps**:
    ```
    sudo apt update && sudo apt upgrade -y
-   sudo apt install python3 python3-venv python3-pip git clang-format golang-go rustc php-cs-fixer -y
+   sudo apt install -y build-essential python3-dev python3-pip python3-venv libgit2-dev libatlas-base-dev clang-format golang-go rustc cargo php-cli curl php-cs-fixer
+   ```
+   If php-cs-fixer not available via apt:
+   ```
+   curl -sS https://getcomposer.org/installer | php
+   php composer.phar global require friendsofphp/php-cs-fixer
    ```
 
 2. **Clone Repo**:
@@ -200,36 +205,41 @@ Tested on Raspberry Pi OS (Bookworm 64-bit). Assumes terminal familiarity.
    cd ApexOrchestrator
    ```
 
-3. **Create Venv**:
+3. **Create Fresh Venv**:
    ```
+   rm -rf venv  # Caution: removes old venv
    python3 -m venv venv
    source venv/bin/activate
    ```
 
-4. **Install Deps**:
+4. **Upgrade Pip & Install Wheel**:
    ```
-   pip install --upgrade pip
-   pip install -r requirements.txt
+   pip install --upgrade pip wheel
    ```
 
-5. **Set Env**:
+5. **Install Pip Deps**:
+   ```
+   pip install python-dotenv beautifulsoup4 black openai passlib sentence-transformers chromadb jsbeautifier ntplib numpy pygit2 requests sqlparse streamlit tiktoken pyyaml tqdm ecdsa scipy pandas matplotlib sympy mpmath statsmodels PuLP astropy qutip control biopython pubchempy dendropy rdkit pyscf pygame chess mido midiutil networkx torch python-snappy
+   ```
+
+6. **Set Env**:
    Create `.env`:
    ```
    XAI_API_KEY=your_key
    LANGSEARCH_API_KEY=optional_key
    ```
 
-6. **Run**:
+7. **Run**:
    ```
    streamlit run chat_mk3.py
    ```
    Access at `http://localhost:8501` or Pi IP.
 
-7. **Service (Optional)**: Use systemd for persistence.
+8. **Service (Optional)**: Use systemd for persistence.
 
-Troubleshooting: ARM-compatible models for embeddings; ChromaDB adjustments.
+Troubleshooting: ARM-compatible models for embeddings/torch; ChromaDB adjustments. For slow builds (e.g., rdkit/pyscf), use --no-binary if errors.
 
-**Agent Venvs**: For isolation, create separate venvs (e.g., `venv-apexcoder`), install deps, run agents independently to avoid shared memory.
+**Agent Venvs**: For isolation, create separate venvs (e.g., `python3 -m venv venv-apexcoder`), activate, install deps, run agents independently to avoid shared state leaks.
 
 ## 🤝 Contributing
 
