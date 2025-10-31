@@ -83,7 +83,7 @@ The core script is a Streamlit app for user interaction:
 graph TD
     A[User Login/Register] --> B{Authenticated?}
     B -->|Yes| C[Select Model/Prompt/Enable Tools]
-    C --> D[Upload Images (Optional)]
+    C --> D[Upload Images Optional]
     D --> E[Chat Input]
     E --> F[Build API Messages (System + History + Images)]
     F --> G{Tools Enabled?}
