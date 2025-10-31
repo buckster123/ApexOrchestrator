@@ -30,6 +30,7 @@ import sqlparse
 import streamlit as st
 import tiktoken
 import builtins
+import venv  # Added for venv support
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
 if not API_KEY:
@@ -104,23 +105,33 @@ default_prompts = {
 Tool Instructions:
 fs_read_file(file_path): Read and return the content of a file in the sandbox (e.g., 'subdir/test.txt'). Use for fetching data. Supports relative paths.
 fs_write_file(file_path, content): Write the provided content to a file in the sandbox (e.g., 'subdir/newfile.txt'). Use for saving or updating files. Supports relative paths.
-fs_list_files(dir_path optional): List all files in the specified directory in the sandbox (e.g., 'subdir'; default root). Use to check available files.
+fs_list_files(dir_path): List all files in the specified directory in the sandbox (e.g., 'subdir'; default root). Use to check available files.
 fs_mkdir(dir_path): Create a new directory in the sandbox (e.g., 'subdir/newdir'). Supports nested paths. Use to organize files.
-memory_insert(mem_key, mem_value): Insert/update key-value memory (fast DB for logs). mem_value as dict.
-memory_query(mem_key optional, limit optional): Query memory entries as JSON.
-get_current_time(sync optional, format optional): Fetch current datetime. sync: true for NTP, false for local. format: 'iso', 'human', 'json'.
+get_current_time(sync, format): Fetch current datetime. sync: true for NTP, false for local. format: 'iso', 'human', 'json'.
 code_execution(code): Execute Python code in stateful REPL with libraries like numpy, sympy, etc.
-git_ops(operation, repo_path, message optional, name optional): Perform Git ops like init, commit, branch, diff in sandbox repo.
-db_query(db_path, query, params optional): Execute SQL on local SQLite db in sandbox, return results for SELECT.
+memory_insert(mem_key, mem_value): Insert/update key-value memory (fast DB for logs). mem_value as dict.
+memory_query(mem_key, limit): Query memory entries as JSON.
+advanced_memory_consolidate(mem_key, interaction_data): Consolidate memory with summary/embedding.
+advanced_memory_retrieve(query, top_k): Retrieve top-k similar memories.
+advanced_memory_prune(): Prune low-salience memories.
+git_ops(operation, repo_path, message, name): Perform Git ops like init, commit, branch, diff in sandbox repo.
+db_query(db_path, query, params): Execute SQL on local SQLite db in sandbox, return results for SELECT.
 shell_exec(command): Run whitelisted shell commands (ls, grep, sed, etc.) in sandbox.
 code_lint(language, code): Lint/format code for languages: python (black), javascript (jsbeautifier), css (cssbeautifier), json, yaml, sql (sqlparse), xml, html (beautifulsoup), cpp/c++ (clang-format), php (php-cs-fixer), go (gofmt), rust (rustfmt). External tools required for some.
-api_simulate(url, method optional, data optional, mock optional): Simulate API call, mock or real for whitelisted public APIs.
+api_simulate(url, method, data, mock): Simulate API call, mock or real for whitelisted public APIs.
+langsearch_web_search(query, freshness, summary, count): Search web with LangSearch API.
 generate_embedding(text): Generate vector embedding for text using SentenceTransformer (384-dim).
-vector_search(query_embedding, top_k optional, threshold optional): Perform ANN vector search in ChromaDB (cosine sim > threshold).
-chunk_text(text, max_tokens optional): Split text into chunks (default 512 tokens).
+vector_search(query_embedding, top_k, threshold): Perform ANN vector search in ChromaDB (cosine sim > threshold).
+chunk_text(text, max_tokens): Split text into chunks (default 512 tokens).
 summarize_chunk(chunk): Compress a text chunk via LLM summary.
-keyword_search(query, top_k optional): Keyword-based search on memory cache (e.g., BM25 sim).
-socratic_api_council(branches, model optional, user optional, convo_id optional): Run a socratic council with multiple personas (Planner, Critic, Executor) via API for branch evaluation.
+keyword_search(query, top_k): Keyword-based search on memory cache (e.g., BM25 sim).
+socratic_api_council(branches, model, user, convo_id, api_key, personas): Run a socratic council with multiple personas (Planner, Critic, Executor) via API for debate and consensus.
+agent_spawn(sub_agent_type, task): Spawn sub-agent (Planner/Critic/Executor) for task.
+reflect_optimize(component, metrics): Optimize component based on metrics.
+venv_create(env_name, with_pip): Create a virtual Python environment in sandbox.
+restricted_exec(code, level): Execute code in a restricted namespace.
+isolated_subprocess(cmd, custom_env): Run command in isolated subprocess.
+
 Invoke tools via structured calls, then incorporate results into your response. Be safe: Never access outside the sandbox, and ask for confirmation on writes if unsure. Limit to one tool per response to avoid loops. When outputting tags or code in your final response text (e.g., <ei> or XML), ensure they are properly escaped or wrapped in markdown code blocks to avoid rendering issues. However, when providing arguments for tools (e.g., the 'content' parameter in fs_write_file), always use the exact, literal, unescaped string content without any modifications or HTML entities (e.g., use "<div>" not "&lt;div&gt;"). JSON-escape quotes as needed (e.g., \").""",
 }
 if not any(f.endswith(".txt") for f in os.listdir(PROMPTS_DIR)):
@@ -286,16 +297,36 @@ SAFE_BUILTINS = {
         "sorted",
     ]
 }
-def code_execution(code: str) -> str:
-    """Execute Python code safely in a stateful REPL."""
+# Enhanced with more libraries available
+ADDITIONAL_LIBS = {
+    'numpy': np,
+    # Add more as needed, e.g., 'sympy': sympy, but since not imported, assume user imports in code
+}
+def code_execution(code: str, venv_path: str = None) -> str:
+    """Execute Python code safely in a stateful REPL, optionally in a venv."""
     if "repl_namespace" not in st.session_state:
-        st.session_state["repl_namespace"] = {"__builtins__": SAFE_BUILTINS}
+        st.session_state["repl_namespace"] = {"__builtins__": SAFE_BUILTINS.copy()}
+        st.session_state["repl_namespace"].update(ADDITIONAL_LIBS)
     old_stdout = sys.stdout
     redirected_output = io.StringIO()
     sys.stdout = redirected_output
     try:
-        exec(code, st.session_state["repl_namespace"])
-        output = redirected_output.getvalue()
+        if venv_path:
+            # Run in venv using subprocess
+            safe_venv = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, venv_path)))
+            if not safe_venv.startswith(os.path.abspath(SANDBOX_DIR)):
+                return "Error: Venv path outside sandbox."
+            venv_python = os.path.join(safe_venv, 'bin', 'python')
+            if not os.path.exists(venv_python):
+                return "Error: Venv Python not found."
+            # Serialize namespace if needed, but for simplicity, run fresh in venv
+            result = subprocess.run([venv_python, '-c', code], capture_output=True, text=True, timeout=30)
+            output = result.stdout
+            if result.stderr:
+                return f"Error: {result.stderr}"
+        else:
+            exec(code, st.session_state["repl_namespace"])
+            output = redirected_output.getvalue()
         return f"Output:\n{output}" if output else "Execution successful (no output)."
     except Exception as e:
         return f"Error: {traceback.format_exc()}"
@@ -768,7 +799,8 @@ def db_query(db_path: str, query: str, params: list = []) -> str:
                 return f"{cur.rowcount} rows affected."
     except Exception as e:
         return f"DB error: {e}"
-WHITELISTED_COMMANDS = ["ls", "grep", "sed", "cat", "echo", "pwd", "grim"]
+# Expanded whitelist with more commands for bigger stack
+WHITELISTED_COMMANDS = ["ls", "grep", "sed", "cat", "echo", "pwd", "pip", "apt", "bash"]  # Added pip, apt, bash for expanded capabilities
 def shell_exec(command: str) -> str:
     cmd_parts = shlex.split(command)
     if not cmd_parts or cmd_parts[0] not in WHITELISTED_COMMANDS:
@@ -922,8 +954,9 @@ def socratic_api_council(
     user: str = None,
     convo_id: int = 0,
     api_key: str = None,
+    personas: list = None,
 ) -> str:
-    """Socratic Council: Uses x.ai API with integrated EAMS consolidation for branch evaluation."""
+    """Socratic Council: Uses xAI API with integrated EAMS consolidation for branch evaluation. Supports dynamic personas for swarm compatibility."""
     if user is None:
         return "Error: user required for memory consolidation in council."
     # Use global API_KEY if not provided
@@ -932,23 +965,38 @@ def socratic_api_council(
     if not api_key:
         return "Error: API key not available."
     client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1/")
-    personas = [
-        {
-            "name": "Planner",
-            "prompt": "As Planner, outline feasible tasks from these branches: {branches}. Prioritize actionable paths.",
-        },
-        {
-            "name": "Critic",
-            "prompt": "As Critic, identify risks and flaws in these branches: {branches}. Flag potential errors or loops.",
-        },
-        {
-            "name": "Executor",
-            "prompt": "As Executor, select the safest branch to execute from: {branches}. Focus on tool utilization and stability.",
-        },
-    ]
+    
+    # Default personas if none provided
+    if not personas:
+        personas = [
+            {
+                "name": "Planner",
+                "prompt": "As Planner, outline feasible tasks from these branches: {branches}. Prioritize actionable paths.",
+            },
+            {
+                "name": "Critic",
+                "prompt": "As Critic, identify risks and flaws in these branches: {branches}. Flag potential errors or loops.",
+            },
+            {
+                "name": "Executor",
+                "prompt": "As Executor, select the safest branch to execute from: {branches}. Focus on tool utilization and stability.",
+            },
+        ]
+    
+    # If branches seem role-specific (e.g., "Analyst: ..."), dynamically adjust personas
+    if all(":" in branch for branch in branches):
+        dynamic_personas = []
+        for branch in branches:
+            role, task = branch.split(":", 1)
+            dynamic_personas.append({
+                "name": role.strip(),
+                "prompt": f"As {role.strip()}, evaluate and respond to: {task.strip()}. Provide specialized insights.",
+            })
+        personas = dynamic_personas  # Override with dynamic roles for swarm support
+    
     verdicts = []
     for persona in personas:
-        for attempt in range(2): # Retry once on error
+        for attempt in range(2):  # Retry once on error
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -963,7 +1011,16 @@ def socratic_api_council(
                     stream=False,
                 )
                 verdict = response.choices[0].message.content.strip()
-                verdicts.append(f"{persona['name']}: {verdict}")
+                
+                # Bleed verification: Check for SIM artifacts
+                if "SIM_" in verdict:
+                    verdict = "[Bleed Detected: Rerouted] Simulated verdict cleaned."
+                
+                # Simulate confidence score (simple heuristic: length-based)
+                confidence = min(1.0, len(verdict) / 500.0) if verdict else 0.5
+                
+                verdicts.append(f"{persona['name']}: {verdict} (Confidence: {confidence:.2f})")
+                
                 # Integrate with EAMS: Consolidate each verdict
                 mem_key = f"council_{persona['name'].lower()}_{uuid.uuid4()}"
                 interaction_data = {
@@ -974,7 +1031,7 @@ def socratic_api_council(
                     "details": verdict,
                     "tags": ["council", "socratic"],
                     "domain": "debate",
-                    "salience": 0.9,
+                    "salience": confidence,  # Use confidence as salience
                 }
                 consolidate_result = advanced_memory_consolidate(
                     mem_key=mem_key,
@@ -992,11 +1049,95 @@ def socratic_api_council(
             except Exception as e:
                 if attempt == 1:
                     verdicts.append(f"{persona['name']}: Error - {e}")
-    aggregated = (
-        " | ".join(verdicts)
-        + " | Aggregated Verdict: Executor path (weighted vote, enhanced for stability)."
-    )
+    
+    # Enhanced Aggregation: Add a final Judge/Synthesizer step
+    if verdicts:
+        synth_prompt = "As Judge, synthesize these verdicts into a consensus: {verdicts}. Use weighted voting based on confidence scores."
+        try:
+            synth_response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": synth_prompt.format(verdicts="\n".join(verdicts))},
+                ],
+                stream=False,
+            )
+            synthesis = synth_response.choices[0].message.content.strip()
+            
+            # Bleed check for synthesis
+            if "SIM_" in synthesis:
+                synthesis = "[Bleed Detected: Rerouted] Simulated synthesis cleaned."
+            
+            aggregated = "\n".join(verdicts) + f"\n\nSynthesized Consensus: {synthesis}"
+        except Exception as e:
+            aggregated = " | ".join(verdicts) + " | Aggregation Error: " + str(e)
+    else:
+        aggregated = "No verdicts generated."
+    
     return aggregated
+
+def agent_spawn(sub_agent_type: str, task: str, user: str = None, convo_id: int = None) -> str:
+    """Spawn sub-agent (Planner/Critic/Executor) for task."""
+    if user is None or convo_id is None:
+        return "Error: user and convo_id required."
+    prompts = {"Planner": "Decompose task into steps.", "Critic": "Debug and critique plan.", "Executor": "Execute using tools."}
+    if sub_agent_type not in prompts:
+        return "Invalid sub-agent."
+    client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/")
+    response = client.chat.completions.create(model="grok-4-fast-reasoning", messages=[{"role": "system", "content": prompts[sub_agent_type]}, {"role": "user", "content": task}])
+    result = response.choices[0].message.content
+    memory_insert(f"{sub_agent_type}_{uuid.uuid4()}", {"task": task, "result": result}, user, convo_id)
+    return result
+
+def reflect_optimize(component: str, metrics: dict, user: str = None, convo_id: int = None) -> str:
+    """Reflect and optimize prompts/modules based on council metrics."""
+    if user is None or convo_id is None:
+        return "Error: user and convo_id required."
+    branches = [f"Optimize {component} given metrics: {json.dumps(metrics)}"]
+    verdict = socratic_api_council(branches, user=user, convo_id=convo_id)
+    fs_write_file(f"optimized_{component}.txt", verdict)
+    return "Optimized."
+
+# New Tools for Bigger Stack
+def venv_create(env_name: str, with_pip: bool = True) -> str:
+    """Create a virtual Python environment in sandbox for isolated package installations."""
+    env_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, env_name)))
+    if not env_path.startswith(os.path.abspath(SANDBOX_DIR)):
+        return "Error: Path outside sandbox."
+    try:
+        builder = venv.EnvBuilder(with_pip=with_pip, clear=True)
+        builder.create(env_path)
+        return f"Virtual env created at {env_name}"
+    except Exception as e:
+        return f"Error creating venv: {e}"
+
+def restricted_exec(code: str, level: str = "basic") -> str:
+    """Execute code in a restricted namespace with optional levels (basic/full)."""
+    restricted_globals = {'__builtins__': SAFE_BUILTINS.copy()}
+    if level == "full":
+        restricted_globals.update(ADDITIONAL_LIBS)
+    old_stdout = sys.stdout
+    redirected_output = io.StringIO()
+    sys.stdout = redirected_output
+    try:
+        exec(code, restricted_globals)
+        output = redirected_output.getvalue()
+        return f"Output:\n{output}" if output else "Execution successful."
+    except Exception as e:
+        return f"Error: {traceback.format_exc()}"
+    finally:
+        sys.stdout = old_stdout
+
+def isolated_subprocess(cmd: str, custom_env: dict = None) -> str:
+    """Run command in isolated subprocess with custom env."""
+    safe_cwd = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, 'temp')))
+    os.makedirs(safe_cwd, exist_ok=True)
+    env = os.environ.copy() if custom_env is None else custom_env
+    try:
+        result = subprocess.run(shlex.split(cmd), cwd=safe_cwd, env=env, capture_output=True, text=True, timeout=30)
+        return result.stdout.strip() + (f"\nError: {result.stderr.strip()}" if result.stderr else "")
+    except Exception as e:
+        return f"Subprocess error: {e}"
+
 # Tool Schema for Structured Outputs (enhanced with new tools)
 TOOLS = [
     {
@@ -1097,7 +1238,8 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "code": {"type": "string", "description": "The code snippet to execute."}
+                    "code": {"type": "string", "description": "The code snippet to execute."},
+                    "venv_path": {"type": "string", "description": "Optional path to venv for execution."}
                 },
                 "required": ["code"],
             },
@@ -1391,7 +1533,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "socratic_api_council",
-            "description": "Run a Socratic Council with multiple personas (Planner, Critic, Executor) via xAI API to evaluate branches. Integrates with advanced memory for consolidation. Model can be overridden via UI.",
+            "description": "Run a Socratic Council with configurable personas via xAI API to evaluate branches. Supports dynamic roles for swarm integration. Integrates with advanced memory for consolidation. Model can be overridden via UI.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1416,11 +1558,110 @@ TOOLS = [
                         "type": "string",
                         "description": "API key (optional, uses global if not provided).",
                     },
+                    "personas": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "prompt": {"type": "string"}
+                            }
+                        },
+                        "description": "Custom list of personas (each with name and prompt template). Defaults to Planner/Critic/Executor.",
+                    },
                 },
                 "required": ["branches", "user"],
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "agent_spawn",
+            "description": "Spawn sub-agent (Planner/Critic/Executor) for task.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sub_agent_type": {
+                        "type": "string",
+                        "description": "Type: Planner, Critic, Executor."
+                    },
+                    "task": {
+                        "type": "string",
+                        "description": "Task for sub-agent."
+                    }
+                },
+                "required": ["sub_agent_type", "task"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "reflect_optimize",
+            "description": "Optimize component based on metrics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "component": {
+                        "type": "string",
+                        "description": "Component to optimize (e.g., prompt)."
+                    },
+                    "metrics": {
+                        "type": "object",
+                        "description": "Performance metrics dict."
+                    }
+                },
+                "required": ["component", "metrics"]
+            }
+        }
+    },
+    # New tool schemas
+    {
+        "type": "function",
+        "function": {
+            "name": "venv_create",
+            "description": "Create a virtual Python environment in sandbox for isolated package installations.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "env_name": {"type": "string", "description": "Name of the venv."},
+                    "with_pip": {"type": "boolean", "description": "Include pip (default True)."}
+                },
+                "required": ["env_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "restricted_exec",
+            "description": "Execute code in a restricted namespace with optional levels (basic/full).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Code to execute."},
+                    "level": {"type": "string", "description": "Access level: basic (default) or full."}
+                },
+                "required": ["code"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "isolated_subprocess",
+            "description": "Run command in an isolated subprocess with custom env.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cmd": {"type": "string", "description": "Command to run."},
+                    "custom_env": {"type": "object", "description": "Custom environment variables."}
+                },
+                "required": ["cmd"],
+            },
+        },
+    }
 ]
 # Tool Dispatcher Dictionary
 TOOL_DISPATCHER = {
@@ -1447,6 +1688,11 @@ TOOL_DISPATCHER = {
     "summarize_chunk": summarize_chunk,
     "keyword_search": keyword_search,
     "socratic_api_council": socratic_api_council,
+    "agent_spawn": agent_spawn,
+    "reflect_optimize": reflect_optimize,
+    "venv_create": venv_create,
+    "restricted_exec": restricted_exec,
+    "isolated_subprocess": isolated_subprocess,
 }
 tool_count = 0
 council_count = 0
@@ -1521,6 +1767,8 @@ def call_xai_api(
                             func_name.startswith("memory")
                             or func_name.startswith("advanced_memory")
                             or func_name == "socratic_api_council"
+                            or func_name == "agent_spawn"
+                            or func_name == "reflect_optimize"
                         ):
                             args["user"] = st.session_state["user"]
                             args["convo_id"] = st.session_state.get("current_convo_id", 0)
@@ -1556,7 +1804,7 @@ def call_xai_api(
     return generate(api_messages)
 # Login Page
 def login_page():
-    st.title("Welcome to The Apex Orchestrator Interface")
+    st.title("Welcome to The Apex Interface")
     tab1, tab2 = st.tabs(["Login", "Register"])
     with tab1:
         with st.form("login_form"):
@@ -1608,7 +1856,7 @@ def delete_history(convo_id):
         st.session_state["current_convo_id"] = 0
     st.rerun()
 def chat_page():
-    st.title(f"Apex Chat - {st.session_state['user']}")
+    st.title(f"Apex Interface - {st.session_state['user']}")
     # --- Sidebar UI ---
     with st.sidebar:
         st.header("Chat Settings")
