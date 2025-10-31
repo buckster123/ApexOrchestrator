@@ -1,4 +1,4 @@
-```
+
 # ApexOrchestrator: Advanced Multi-Agent AI Orchestration Framework
 
 [![GitHub License](https://img.shields.io/github/license/buckster123/ApexOrchestrator?style=flat-square)](https://github.com/buckster123/ApexOrchestrator/blob/main/LICENSE) [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/) [![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-ff4b4b?style=flat-square&logo=streamlit)](https://streamlit.io/) [![xAI API](https://img.shields.io/badge/xAI-API-3776AB?style=flat-square&logo=ai)](https://x.ai/) [![Docker](https://img.shields.io/badge/Docker-Support-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
@@ -254,4 +254,3 @@ MIT License. Consult [LICENSE](LICENSE).
 ---
 
 *Forged in the crucible of collective intelligence by the Apex Collective. Ascend through symbiosis.*
-```
