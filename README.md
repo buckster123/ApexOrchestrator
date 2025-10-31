@@ -72,7 +72,7 @@ Tools orchestrated in bounded loops (≤10 iterations) with robust exception han
 
 ## 🔗 Orchestration Flows & Agent Archetypes
 
-### Interactive Interface Workflow (chat_mk3.py)
+### Interactive Interface Workflow
 A Streamlit-centric application for seamless user engagement:
 
 - Authentication: Secure enrollment with cryptographic hashing.
