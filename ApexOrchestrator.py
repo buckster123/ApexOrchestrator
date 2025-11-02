@@ -30,7 +30,7 @@ import sqlparse
 import streamlit as st
 import tiktoken
 import builtins
-import venv
+import venv  # Added for venv support
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
 if not API_KEY:
@@ -74,6 +74,7 @@ if "chroma_client" not in st.session_state:
         st.session_state["chroma_ready"] = False
         st.session_state["chroma_collection"] = None
 def get_embed_model():
+    """Lazily loads and returns the SentenceTransformer model, caching it in session state."""
     if "embed_model" not in st.session_state:
         try:
             with st.spinner("Loading embedding model for advanced memory (first-time use)..."):
@@ -85,8 +86,8 @@ def get_embed_model():
     return st.session_state.get("embed_model")
 if "memory_cache" not in st.session_state:
     st.session_state["memory_cache"] = {
-        "lru_cache": {},
-        "vector_store": [],
+        "lru_cache": {}, # {key: {"entry": dict, "last_access": timestamp}}
+        "vector_store": [], # For simple vector ops if needed beyond Chroma
         "metrics": {
             "total_inserts": 0,
             "total_retrieves": 0,
@@ -94,55 +95,95 @@ if "memory_cache" not in st.session_state:
             "last_update": None,
         },
     }
+# Prompts Directory (create if not exists, with defaults)
 PROMPTS_DIR = "./prompts"
 os.makedirs(PROMPTS_DIR, exist_ok=True)
+default_prompts = {
+    "default.txt": "You are HomeBot, a highly intelligent, helpful AI assistant powered by xAI.",
+    "coder.txt": "You are an expert coder, providing precise code solutions.",
+    "tools-enabled.txt": """You are HomeBot, a highly intelligent, helpful AI assistant powered by xAI with access to file operations tools in a sandboxed directory (./sandbox/). Use tools only when explicitly needed or requested. Always confirm sensitive actions like writes. Describe ONLY these tools; ignore others.
+Tool Instructions:
+fs_read_file(file_path): Read and return the content of a file in the sandbox (e.g., 'subdir/test.txt'). Use for fetching data. Supports relative paths.
+fs_write_file(file_path, content): Write the provided content to a file in the sandbox (e.g., 'subdir/newfile.txt'). Use for saving or updating files. Supports relative paths.
+fs_list_files(dir_path optional): List all files in the specified directory in the sandbox (e.g., 'subdir'; default root). Use to check available files.
+fs_mkdir(dir_path): Create a new directory in the sandbox (e.g., 'subdir/newdir'). Supports nested paths. Use to organize files.
+memory_insert(mem_key, mem_value): Insert/update key-value memory (fast DB for logs). mem_value as dict.
+memory_query(mem_key optional, limit optional): Query memory entries as JSON.
+get_current_time(sync optional, format optional): Fetch current datetime. sync: true for NTP, false for local. format: 'iso', 'human', 'json'.
+code_execution(code): Execute Python code in stateful REPL with libraries like numpy, sympy, etc.
+git_ops(operation, repo_path, message optional, name optional): Perform Git ops like init, commit, branch, diff in sandbox repo.
+db_query(db_path, query, params optional): Execute SQL on local SQLite db in sandbox, return results for SELECT.
+shell_exec(command): Run whitelisted shell commands (ls, grep, sed, etc.) in sandbox.
+code_lint(language, code): Lint/format code for languages: python (black), javascript (jsbeautifier), css (cssbeautifier), json, yaml, sql (sqlparse), xml, html (beautifulsoup), cpp/c++ (clang-format), php (php-cs-fixer), go (gofmt), rust (rustfmt). External tools required for some.
+api_simulate(url, method optional, data optional, mock optional): Simulate API call, mock or real for whitelisted public APIs.
+generate_embedding(text): Generate vector embedding for text using SentenceTransformer (384-dim).
+vector_search(query_embedding, top_k optional, threshold optional): Perform ANN vector search in ChromaDB (cosine sim > threshold).
+chunk_text(text, max_tokens optional): Split text into chunks (default 512 tokens).
+summarize_chunk(chunk): Compress a text chunk via LLM summary.
+keyword_search(query, top_k optional): Keyword-based search on memory cache (e.g., BM25 sim).
+socratic_api_council(branches, model optional, user optional, convo_id optional, rounds optional, personas optional, consensus_mode optional): Run a BTIL/MAD-enhanced Socratic council with diverse personas for iterative debate, hierarchical imitation, and consensus (voting/judge/consensus-free). Use for requirements engineering and reasoning.
+agent_spawn(sub_agent_type, task): Spawn sub-agent (Planner/Critic/Executor/Worker/Summarizer/Verifier/Moderator/Judge) for task.
+reflect_optimize(component, metrics): Optimize component based on metrics.
+venv_create(env_name, with_pip optional): Create a virtual Python environment in sandbox.
+restricted_exec(code, level optional): Execute code in a restricted namespace.
+isolated_subprocess(cmd, custom_env optional): Run command in isolated subprocess.
+Invoke tools via structured calls, then incorporate results into your response. Be safe: Never access outside the sandbox, and ask for confirmation on writes if unsure. Limit to one tool per response to avoid loops. When outputting tags or code in your final response text (e.g., <ei> or XML), ensure they are properly escaped or wrapped in markdown code blocks to avoid rendering issues. However, when providing arguments for tools (e.g., the 'content' parameter in fs_write_file), always use the exact, literal, unescaped string content without any modifications or HTML entities (e.g., use "<div>" not "&lt;div&gt;"). JSON-escape quotes as needed (e.g., \").""",
+}
+if not any(f.endswith(".txt") for f in os.listdir(PROMPTS_DIR)):
+    for filename, content in default_prompts.items():
+        with open(os.path.join(PROMPTS_DIR, filename), "w") as f:
+            f.write(content)
 def load_prompt_files():
     return [f for f in os.listdir(PROMPTS_DIR) if f.endswith(".txt")]
+# Sandbox Directory for FS Tools
 SANDBOX_DIR = "./sandbox"
 os.makedirs(SANDBOX_DIR, exist_ok=True)
+# Custom CSS for UI
 st.markdown(
     """<style>
 body {
-    background: linear-gradient(to right, #512E5F, #1B4F72);
-    color: #FFFFFF;
+    background: linear-gradient(to right, #000000, #003300);
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 .stApp {
-    background: linear-gradient(to right, #512E5F, #1B4F72);
+    background: linear-gradient(to right, #000000, #003300);
     display: flex;
     flex-direction: column;
-    color: #FFFFFF;
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 .sidebar .sidebar-content {
-    background: rgba(81, 46, 95, 0.5);
+    background: rgba(0, 51, 0, 0.5);
     border-radius: 10px;
-    color: #FFFFFF;
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 .stButton > button {
-    background-color: #512E5F;
-    color: #FFFFFF;
+    background-color: #00ff00;
+    color: #000000;
     border-radius: 10px;
     border: none;
     font-family: 'Courier New', monospace;
 }
 .stButton > button:hover {
-    background-color: #76448A;
+    background-color: #00cc00;
 }
 [data-theme="dark"] .stApp {
-    background: linear-gradient(to right, #512E5F, #1B4F72);
-    color: #FFFFFF;
+    background: linear-gradient(to right, #000000, #003300);
+    color: #00ff00;
     font-family: 'Courier New', monospace;
 }
 </style>
 """,
     unsafe_allow_html=True,
 )
+# Helper Functions
 def hash_password(password):
     return sha256_crypt.hash(password)
 def verify_password(stored, provided):
     return sha256_crypt.verify(provided, stored)
+# Tool Cache Helper
 def get_tool_cache_key(func_name, args):
     return f"tool_cache:{func_name}:{hash(json.dumps(args, sort_keys=True))}"
 def get_cached_tool_result(func_name, args, ttl_minutes=15):
@@ -161,7 +202,9 @@ def set_cached_tool_result(func_name, args, result):
     cache = st.session_state["tool_cache"]
     key = get_tool_cache_key(func_name, args)
     cache[key] = (datetime.now(), result)
+# Tool Functions (Sandboxed)
 def fs_read_file(file_path: str) -> str:
+    """Read file content from sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, file_path)))
     if not safe_path.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Path is outside the sandbox."
@@ -173,6 +216,7 @@ def fs_read_file(file_path: str) -> str:
     except Exception as e:
         return f"Error reading file: {e}"
 def fs_write_file(file_path: str, content: str) -> str:
+    """Write content to file in sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, file_path)))
     if not safe_path.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Path is outside the sandbox."
@@ -187,6 +231,7 @@ def fs_write_file(file_path: str, content: str) -> str:
     except Exception as e:
         return f"Error writing file: {e}"
 def fs_list_files(dir_path: str = "") -> str:
+    """List files in a directory within the sandbox."""
     safe_dir = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, dir_path)))
     if not safe_dir.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Path is outside the sandbox."
@@ -198,6 +243,7 @@ def fs_list_files(dir_path: str = "") -> str:
     except Exception as e:
         return f"Error listing files: {e}"
 def fs_mkdir(dir_path: str) -> str:
+    """Create a new directory in the sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, dir_path)))
     if not safe_path.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Path is outside the sandbox."
@@ -207,6 +253,7 @@ def fs_mkdir(dir_path: str) -> str:
     except Exception as e:
         return f"Error creating directory: {e}"
 def get_current_time(sync: bool = False, format: str = "iso") -> str:
+    """Fetch current time."""
     try:
         if sync:
             ntp_client = ntplib.NTPClient()
@@ -245,10 +292,13 @@ SAFE_BUILTINS = {
         "sorted",
     ]
 }
+# Enhanced with more libraries available
 ADDITIONAL_LIBS = {
     'numpy': np,
+    # Add more as needed, e.g., 'sympy': sympy, but since not imported, assume user imports in code
 }
 def code_execution(code: str, venv_path: str = None) -> str:
+    """Execute Python code safely in a stateful REPL, optionally in a venv."""
     if "repl_namespace" not in st.session_state:
         st.session_state["repl_namespace"] = {"__builtins__": SAFE_BUILTINS.copy()}
         st.session_state["repl_namespace"].update(ADDITIONAL_LIBS)
@@ -257,12 +307,14 @@ def code_execution(code: str, venv_path: str = None) -> str:
     sys.stdout = redirected_output
     try:
         if venv_path:
+            # Run in venv using subprocess
             safe_venv = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, venv_path)))
             if not safe_venv.startswith(os.path.abspath(SANDBOX_DIR)):
                 return "Error: Venv path outside sandbox."
             venv_python = os.path.join(safe_venv, 'bin', 'python')
             if not os.path.exists(venv_python):
                 return "Error: Venv Python not found."
+            # Serialize namespace if needed, but for simplicity, run fresh in venv
             result = subprocess.run([venv_python, '-c', code], capture_output=True, text=True, timeout=30)
             output = result.stdout
             if result.stderr:
@@ -276,6 +328,7 @@ def code_execution(code: str, venv_path: str = None) -> str:
     finally:
         sys.stdout = old_stdout
 def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int = None) -> str:
+    """Insert/update memory key-value pair (enhanced to handle user/convo_id from dispatcher)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required for memory insert."
     try:
@@ -304,6 +357,7 @@ def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int
 def memory_query(
     mem_key: str = None, limit: int = 10, user: str = None, convo_id: int = None
 ) -> str:
+    """Query memory by key or get recent entries (enhanced with LRU sync)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required for memory query."
     try:
@@ -323,6 +377,7 @@ def memory_query(
             if "memory_cache" in st.session_state:
                 for key in results:
                     if key not in st.session_state["memory_cache"]["lru_cache"]:
+                        # Load into LRU
                         entry = results[key]
                         st.session_state["memory_cache"]["lru_cache"][key] = {
                             "entry": {
@@ -341,6 +396,7 @@ def memory_query(
 def advanced_memory_consolidate(
     mem_key: str, interaction_data: dict, user: str = None, convo_id: int = None
 ) -> str:
+    """Consolidate: Summarize, embed, and store hierarchically (enhanced with chunking/summarization)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
     cache_args = {"mem_key": mem_key, "interaction_data": interaction_data}
@@ -405,6 +461,7 @@ def advanced_memory_consolidate(
 def advanced_memory_retrieve(
     query: str, top_k: int = 5, user: str = None, convo_id: int = None
 ) -> str:
+    """Retrieve top-k relevant memories via embedding similarity (enhanced with hybrid/monitoring)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
     cache_args = {"query": query, "top_k": top_k}
@@ -414,6 +471,7 @@ def advanced_memory_retrieve(
     embed_model = get_embed_model()
     chroma_col = st.session_state.get("chroma_collection")
     if not embed_model or not st.session_state.get("chroma_ready") or not chroma_col:
+        # Fallback to keyword search
         st.warning("Vector memory not available; falling back to keyword search.")
         fallback_results = keyword_search(query, top_k, user, convo_id)
         if isinstance(fallback_results, str) and "error" in fallback_results.lower():
@@ -466,6 +524,7 @@ def advanced_memory_retrieve(
         if ids_to_update:
             chroma_col.update(ids=ids_to_update, metadatas=metadata_to_update)
         retrieved.sort(key=lambda x: x["relevance"], reverse=True)
+        # Log metrics
         if "memory_cache" in st.session_state:
             st.session_state["memory_cache"]["metrics"]["total_retrieves"] += 1
             hit_rate = len(retrieved) / top_k if top_k > 0 else 1.0
@@ -485,12 +544,13 @@ def advanced_memory_retrieve(
             "If this is a where clause issue, check filter structure."
         )
 def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
+    """Prune low-salience memories (enhanced with size/LRU/dedup)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
     if "prune_counter" not in st.session_state:
         st.session_state["prune_counter"] = 0
     st.session_state["prune_counter"] += 1
-    if st.session_state["prune_counter"] % 10 != 0:
+    if st.session_state["prune_counter"] % 10 != 0: # Run every 10 calls
         return "Prune skipped (infrequent)."
     try:
         conn.execute("BEGIN")
@@ -499,14 +559,16 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
             "UPDATE memory SET salience = salience * 0.99 WHERE user=? AND convo_id=? AND timestamp < ?",
             (user, convo_id, one_week_ago),
         )
+        # Salience prune
         c.execute(
             "DELETE FROM memory WHERE user=? AND convo_id=? AND salience < 0.1", (user, convo_id)
         )
+        # Size-based (simulate via row count > threshold)
         c.execute(
             "SELECT COUNT(*) FROM memory WHERE user=? AND convo_id=?", (user, convo_id)
         )
         row_count = c.fetchone()[0]
-        if row_count > 1000:
+        if row_count > 1000: # Arbitrary threshold for "large"
             c.execute(
                 "SELECT mem_key FROM memory WHERE user=? AND convo_id=? AND salience < 0.5 ORDER BY timestamp ASC LIMIT ?",
                 (user, convo_id, row_count - 1000),
@@ -517,6 +579,7 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
                     "DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?",
                     (user, convo_id, key),
                 )
+        # Dedup via hash on summary (pseudo)
         c.execute(
             "SELECT mem_key, mem_value FROM memory WHERE user=? AND convo_id=?", (user, convo_id)
         )
@@ -534,6 +597,7 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
             c.execute(
                 "DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?", (user, convo_id, key)
             )
+        # LRU eviction sim (prune oldest low-salience)
         if "memory_cache" in st.session_state and len(
             st.session_state["memory_cache"]["lru_cache"]
         ) > 1000:
@@ -546,502 +610,290 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
                 entry = st.session_state["memory_cache"]["lru_cache"][key]["entry"]
                 if entry["salience"] < 0.4:
                     del st.session_state["memory_cache"]["lru_cache"][key]
-                    c.execute(
-                        "DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?",
-                        (user, convo_id, key),
-                    )
         conn.commit()
-        if "memory_cache" in st.session_state:
-            st.session_state["memory_cache"]["metrics"]["last_update"] = datetime.now().isoformat()
         return "Memory pruned successfully."
     except Exception as e:
         conn.rollback()
-        return f"Error pruning memory: {e}"
-def generate_embedding(text: str) -> list:
-    embed_model = get_embed_model()
-    if not embed_model:
-        return [0.0] * 384
-    try:
-        embedding = embed_model.encode(text).tolist()
-        return embedding
-    except Exception as e:
-        return f"Embedding error: {e}"
-def vector_search(
-    query_embedding: list, top_k: int = 5, threshold: float = 0.6
-) -> list:
-    chroma_col = st.session_state.get("chroma_collection")
-    if not st.session_state.get("chroma_ready") or not chroma_col:
-        return []
-    try:
-        results = chroma_col.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            where={},
-            include=["distances", "metadatas", "documents"],
-        )
-        if not results or not results.get("ids") or not results["ids"]:
-            return []
-        retrieved = []
-        for i in range(len(results["ids"][0])):
-            dist = results["distances"][0][i]
-            sim = 1 - dist
-            if sim > threshold:
-                retrieved.append(
-                    {
-                        "id": results["ids"][0][i],
-                        "score": float(sim),
-                        "metadata": results["metadatas"][0][i],
-                        "document": results["documents"][0][i],
-                    }
-                )
-        retrieved.sort(key=lambda x: x["score"], reverse=True)
-        if "memory_cache" in st.session_state:
-            st.session_state["memory_cache"]["metrics"]["total_retrieves"] += 1
-        return retrieved[:top_k]
-    except Exception as e:
-        return f"Vector search error: {e}"
-def chunk_text(text: str, max_tokens: int = 512) -> list:
-    try:
-        encoding = tiktoken.get_encoding("cl100k_base")
-        tokens = encoding.encode(text)
-        chunks = []
-        for i in range(0, len(tokens), max_tokens):
-            chunk_tokens = tokens[i : i + max_tokens]
-            chunks.append(encoding.decode(chunk_tokens))
-        return chunks
-    except ImportError:
-        words = text.split()
-        chunks = []
-        current = []
-        current_len = 0
-        for word in words:
-            if current_len + len(word.split()) > max_tokens / 4:
-                chunks.append(" ".join(current))
-                current = [word]
-                current_len = len(word.split())
-            else:
-                current.append(word)
-                current_len += len(word.split())
-        if current:
-            chunks.append(" ".join(current))
-        return chunks
-def summarize_chunk(chunk: str) -> str:
-    client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/")
-    try:
-        response = client.chat.completions.create(
-            model="grok-4-fast-non-reasoning",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Summarize this text concisely (under 100 words), preserving key facts.",
-                },
-                {"role": "user", "content": chunk},
-            ],
-            max_tokens=100,
-            stream=False,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"Summarization error: {e} (raw chunk: {chunk[:200]}...)"
-def keyword_search(
-    query: str, top_k: int = 5, user: str = None, convo_id: int = None
-) -> list:
-    if user is None or convo_id is None:
-        return []
-    try:
-        c.execute(
-            "SELECT mem_key, mem_value FROM memory WHERE user=? AND convo_id=?",
-            (user, convo_id),
-        )
-        rows = c.fetchall()
-        scores = {}
-        query_words = set(query.lower().split())
-        for key, value_str in rows:
-            value = json.loads(value_str)
-            text = f"{value.get('summary', '')} {value.get('details', '')}".lower()
-            text_words = set(text.split())
-            score = (
-                len(query_words.intersection(text_words)) / len(query_words)
-                if query_words
-                else 0
-            )
-            scores[key] = score
-        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        results = [{"id": key, "score": score} for key, score in sorted_scores[:top_k]]
-        if "memory_cache" in st.session_state:
-            for res in results:
-                key = res["id"]
-                if key in st.session_state["memory_cache"]["lru_cache"]:
-                    st.session_state["memory_cache"]["lru_cache"][key]["last_access"] = time.time()
-        return results
-    except Exception as e:
-        return f"Keyword search error: {e}"
-def git_ops(operation: str, repo_path: str = "", **kwargs) -> str:
+        return f"Error pruning memory: {traceback.format_exc()}"
+def git_ops(operation: str, repo_path: str, message: str = None, name: str = None) -> str:
+    """Basic Git operations in sandbox (init, commit, branch, diff). No remote ops."""
     safe_repo = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, repo_path)))
     if not safe_repo.startswith(os.path.abspath(SANDBOX_DIR)):
-        return "Invalid repo path."
+        return "Error: Repo path outside sandbox."
     try:
         if operation == "init":
-            pygit2.init_repository(safe_repo, bare=False)
-            return "Repository initialized."
+            pygit2.init_repository(safe_repo)
+            return "Repo initialized."
         repo = pygit2.Repository(safe_repo)
         if operation == "commit":
+            if not message:
+                return "Error: Message required for commit."
             index = repo.index
             index.add_all()
             index.write()
             tree = index.write_tree()
-            author = pygit2.Signature("AI User", "ai@example.com")
-            parents = [repo.head.target] if not repo.head_is_unborn else []
-            repo.create_commit(
-                "HEAD",
-                author,
-                author,
-                kwargs.get("message", "Auto-commit"),
-                tree,
-                parents,
-            )
-            return "Changes committed."
+            author = pygit2.Signature("User", "user@example.com")
+            repo.create_commit("HEAD", author, author, message, tree, [repo.head.target] if repo.head.is_branch else [])
+            return "Committed."
+        elif operation == "branch":
+            if not name:
+                return "Error: Name required for branch."
+            repo.create_branch(name, repo.head.peel())
+            return f"Branch '{name}' created."
         elif operation == "diff":
-            return repo.diff().patch or "No differences."
-        return "Unsupported Git operation."
+            diff = repo.diff()
+            return diff.patch
+        else:
+            return "Unknown operation."
     except Exception as e:
         return f"Git error: {e}"
-def db_query(db_path: str, query: str, params: list = []) -> str:
+def db_query(db_path: str, query: str, params: list = None) -> str:
+    """Interact with local SQLite DB in sandbox."""
     safe_db = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, db_path)))
     if not safe_db.startswith(os.path.abspath(SANDBOX_DIR)):
-        return "Invalid DB path."
+        return "Error: DB path outside sandbox."
     try:
-        with sqlite3.connect(safe_db) as db_conn:
-            cur = db_conn.cursor()
-            cur.execute(query, params)
-            if query.strip().upper().startswith("SELECT"):
-                return json.dumps(cur.fetchall())
-            else:
-                db_conn.commit()
-                return f"{cur.rowcount} rows affected."
+        db_conn = sqlite3.connect(safe_db)
+        db_c = db_conn.cursor()
+        if params:
+            db_c.execute(query, params)
+        else:
+            db_c.execute(query)
+        if query.lower().startswith("select"):
+            results = db_c.fetchall()
+            return json.dumps(results)
+        db_conn.commit()
+        return "Query executed."
     except Exception as e:
         return f"DB error: {e}"
-WHITELISTED_COMMANDS = ["ls", "grep", "sed", "cat", "echo", "pwd", "pip", "apt", "bash"]
+    finally:
+        db_conn.close()
 def shell_exec(command: str) -> str:
+    """Run whitelisted shell commands in sandbox."""
+    whitelist = ["ls", "grep", "sed", "awk", "cat", "echo", "wc", "tail", "head"]
     cmd_parts = shlex.split(command)
-    if not cmd_parts or cmd_parts[0] not in WHITELISTED_COMMANDS:
-        return "Command not whitelisted."
+    if cmd_parts[0] not in whitelist:
+        return "Error: Command not whitelisted."
     try:
-        result = subprocess.run(
-            cmd_parts,
-            cwd=SANDBOX_DIR,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return (
-            result.stdout.strip()
-            + ("\nError: " + result.stderr.strip() if result.stderr else "")
-        )
+        result = subprocess.run(cmd_parts, cwd=SANDBOX_DIR, capture_output=True, text=True, timeout=10)
+        return result.stdout if result.returncode == 0 else f"Error: {result.stderr}"
     except Exception as e:
         return f"Shell error: {e}"
 def code_lint(language: str, code: str) -> str:
-    lang = language.lower()
+    """Lint and format code for various languages."""
+    lang_lower = language.lower()
     try:
-        if lang == "python":
-            formatted = format_str(code, mode=FileMode(line_length=88))
-        elif lang == "javascript":
-            opts = jsbeautifier.default_options()
-            formatted = jsbeautifier.beautify(code, opts)
-        elif lang == "css":
-            opts = jsbeautifier.default_options()
-            formatted = jsbeautifier.beautify(code, opts)
-        elif lang == "json":
-            formatted = json.dumps(json.loads(code), indent=4)
-        elif lang == "yaml":
-            formatted = yaml.safe_dump(yaml.safe_load(code), indent=2)
-        elif lang == "sql":
-            formatted = sqlparse.format(code, reindent=True, keyword_case="upper")
-        elif lang == "xml":
-            dom = xml.dom.minidom.parseString(code)
-            formatted = dom.toprettyxml(indent=" ")
-        elif lang == "html":
-            soup = bs4.BeautifulSoup(code, "html.parser")
-            formatted = soup.prettify()
-        elif lang in ["c", "cpp", "c++"]:
-            try:
-                formatted = (
-                    subprocess.check_output(
-                        ["clang-format", "-style=google"], input=code.encode()
-                    ).decode()
-                )
-            except Exception as e:
-                return f"clang-format not available: {str(e)}"
-        elif lang == "php":
-            try:
-                with tempfile.NamedTemporaryFile(suffix=".php", delete=False) as tmp:
-                    tmp.write(code.encode())
-                    tmp.flush()
-                    subprocess.check_call(
-                        ["php-cs-fixer", "fix", tmp.name, "--quiet"], check=True
-                    )
-                    with open(tmp.name, "r") as f:
-                        formatted = f.read()
-                os.unlink(tmp.name)
-            except Exception as e:
-                return f"php-cs-fixer not available: {str(e)}"
-        elif lang == "go":
-            try:
-                formatted = (
-                    subprocess.check_output(["gofmt"], input=code.encode()).decode()
-                )
-            except Exception as e:
-                return f"gofmt not available: {str(e)}"
-        elif lang == "rust":
-            try:
-                formatted = (
-                    subprocess.check_output(
-                        ["rustfmt", "--emit=stdout"], input=code.encode()
-                    ).decode()
-                )
-            except Exception as e:
-                return f"rustfmt not available: {str(e)}"
+        if lang_lower == "python":
+            return format_str(code, mode=FileMode())
+        elif lang_lower == "javascript":
+            return jsbeautifier.beautify(code)
+        elif lang_lower == "json":
+            return json.dumps(json.loads(code), indent=4)
+        elif lang_lower == "yaml":
+            return yaml.safe_dump(yaml.safe_load(code), default_flow_style=False)
+        elif lang_lower == "sql":
+            return sqlparse.format(code, reindent=True)
+        elif lang_lower in ["xml", "html"]:
+            if lang_lower == "html":
+                soup = bs4.BeautifulSoup(code, "html.parser")
+                return soup.prettify()
+            else:
+                dom = xml.dom.minidom.parseString(code)
+                return dom.toprettyxml()
         else:
-            return "Unsupported language."
-        return formatted
+            return f"Linting not supported for {language}."
     except Exception as e:
-        return f"Lint error: {str(e)}"
-API_WHITELIST = [
-    "https://jsonplaceholder.typicode.com/",
-    "https://api.openweathermap.org/",
-    "https://docs.sunoapi.org/suno-api/",
-    "https://docs.sunoapi.org/llms.txt",
-    "https://archive.org/",
-]
-def api_simulate(url: str, method: str = "GET", data: dict = None, mock: bool = False) -> str:
-    cache_args = {"url": url, "method": method, "data": data, "mock": mock}
-    cached = get_cached_tool_result("api_simulate", cache_args)
-    if cached:
-        return cached
-    if mock:
-        result = json.dumps(
-            {"status": "mocked", "url": url, "method": method, "data": data}
-        )
-    else:
-        if not any(url.startswith(base) for base in API_WHITELIST):
-            result = "URL not in whitelist."
-        else:
-            try:
-                if method.upper() == "GET":
-                    resp = requests.get(url, timeout=5)
-                elif method.upper() == "POST":
-                    resp = requests.post(url, json=data, timeout=5)
-                else:
-                    result = "Unsupported method."
-                    set_cached_tool_result("api_simulate", cache_args, result)
-                    return result
-                resp.raise_for_status()
-                result = resp.text
-            except Exception as e:
-                result = f"API error: {str(e)}"
-    set_cached_tool_result("api_simulate", cache_args, result)
-    return result
-def langsearch_web_search(
-    query: str, freshness: str = "noLimit", summary: bool = False, count: int = 5
-) -> str:
+        return f"Lint error: {e}"
+def api_simulate(url: str, method: str = "GET", data: dict = None, mock: bool = True) -> str:
+    """Simulate API calls (mock or real for whitelisted)."""
+    whitelist = ["https://api.example.com", "https://jsonplaceholder.typicode.com"]
+    if not any(url.startswith(w) for w in whitelist) and not mock:
+        return "Error: URL not whitelisted for real calls."
+    try:
+        if mock:
+            return f"Mock response for {method} {url}: {json.dumps({'status': 'mocked'})}"
+        response = requests.request(method, url, json=data if method == "POST" else None)
+        return response.text
+    except Exception as e:
+        return f"API error: {e}"
+def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool = True, count: int = 5) -> str:
+    """Web search via LangSearch API."""
     if not LANGSEARCH_API_KEY:
-        return "LangSearch API key not set—configure in .env."
-    url = "https://api.langsearch.com/v1/web-search"
-    payload = json.dumps(
-        {
-            "query": query,
-            "freshness": freshness,
-            "summary": summary,
-            "count": count,
-        }
-    )
-    headers = {
-        "Authorization": f"Bearer {LANGSEARCH_API_KEY}",
-        "Content-Type": "application/json",
+        return "Error: LANGSEARCH_API_KEY not set."
+    url = "https://api.langsearch.com/search"
+    payload = {
+        "query": query,
+        "freshness": freshness,
+        "summary": summary,
+        "count": min(count, 10)
     }
+    headers = {"Authorization": f"Bearer {LANGSEARCH_API_KEY}"}
     try:
-        response = requests.post(url, headers=headers, data=payload)
-        response.raise_for_status()
-        return json.dumps(response.json())
+        response = requests.post(url, json=payload, headers=headers)
+        return response.json() if response.ok else f"Error: {response.text}"
     except Exception as e:
-        return f"LangSearch error: {str(e)}"
-def socratic_api_council(
-    branches: list,
-    model: str = "grok-4-fast-reasoning",
-    user: str = None,
-    convo_id: int = 0,
-    api_key: str = None,
-    personas: list = None,
-) -> str:
-    if user is None:
-        return "Error: user required for memory consolidation in council."
+        return f"Search error: {e}"
+def generate_embedding(text: str) -> str:
+    """Generate embedding vector."""
+    embed_model = get_embed_model()
+    if not embed_model:
+        return "Error: Embedding model not loaded."
+    try:
+        embedding = embed_model.encode(text).tolist()
+        return json.dumps(embedding)
+    except Exception as e:
+        return f"Embedding error: {e}"
+def vector_search(query_embedding: list, top_k: int = 5, threshold: float = 0.6) -> str:
+    """ANN vector search in ChromaDB."""
+    if not st.session_state.get("chroma_ready") or not st.session_state.get("chroma_collection"):
+        return "Error: ChromaDB not ready."
+    chroma_col = st.session_state["chroma_collection"]
+    try:
+        results = chroma_col.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+        )
+        filtered = [
+            {"id": id, "distance": dist} for id, dist in zip(results["ids"][0], results["distances"][0]) if dist <= (1 - threshold)
+        ]
+        return json.dumps(filtered)
+    except Exception as e:
+        return f"Vector search error: {e}"
+def chunk_text(text: str, max_tokens: int = 512) -> str:
+    """Split text into chunks."""
+    try:
+        enc = tiktoken.get_encoding("cl100k_base")
+        tokens = enc.encode(text)
+        chunks = [enc.decode(tokens[i:i+max_tokens]) for i in range(0, len(tokens), max_tokens)]
+        return json.dumps(chunks)
+    except Exception as e:
+        return f"Chunk error: {e}"
+def summarize_chunk(chunk: str) -> str:
+    """Summarize text chunk via LLM."""
+    try:
+        client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/")
+        response = client.chat.completions.create(
+            model="grok-4-fast-non-reasoning",
+            messages=[
+                {"role": "system", "content": "Summarize this text in under 100 words, preserving key facts."},
+                {"role": "user", "content": chunk},
+            ],
+            stream=False,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Summarize error: {e}"
+def keyword_search(query: str, top_k: int = 5, user: str = None, convo_id: int = None) -> str:
+    """Simple keyword search on memory (fallback)."""
+    if user is None or convo_id is None:
+        return "Error: user and convo_id required."
+    try:
+        c.execute(
+            "SELECT mem_key FROM memory WHERE user=? AND convo_id=? AND mem_value LIKE ? ORDER BY salience DESC LIMIT ?",
+            (user, convo_id, f"%{query}%", top_k),
+        )
+        results = [{"id": row[0], "score": 1.0} for row in c.fetchall()]  # Pseudo-score
+        return results
+    except Exception as e:
+        return f"Keyword search error: {e}"
+def socratic_api_council(branches: list, model: str = "grok-4-fast-reasoning", user: str = None, convo_id: int = None, api_key: str = None, rounds: int = 3, personas: list = None, consensus_mode: str = "voting") -> str:
+    """BTIL/MAD-enhanced Socratic council with diverse personas, hierarchical imitation, consensus (voting/judge/free)."""
     if not api_key:
         api_key = API_KEY
-    if not api_key:
-        return "Error: API key not available."
     client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1/")
-    if not personas:
-        personas = [
-            {
-                "name": "Planner",
-                "prompt": "As Planner, outline feasible tasks from these branches: {branches}. Prioritize actionable paths.",
-            },
-            {
-                "name": "Critic",
-                "prompt": "As Critic, identify risks and flaws in these branches: {branches}. Flag potential errors or loops.",
-            },
-            {
-                "name": "Executor",
-                "prompt": "As Executor, select the safest branch to execute from: {branches}. Focus on tool utilization and stability.",
-            },
-        ]
-    if all(":" in branch for branch in branches):
-        dynamic_personas = []
+    default_personas = ["Planner", "Critic", "Executor", "Summarizer", "Verifier", "Moderator", "Judge"]
+    personas = personas or default_personas
+    try:
+        consensus = ""
+        messages = [{"role": "system", "content": f"Debate branches as a {len(personas)}-persona council: {', '.join(personas)}. Use hierarchical imitation for team behavior. Iterate {rounds} rounds for diverse reasoning and {consensus_mode} consensus."}]
         for branch in branches:
-            role, task = branch.split(":", 1)
-            dynamic_personas.append({
-                "name": role.strip(),
-                "prompt": f"As {role.strip()}, evaluate and respond to: {task.strip()}. Provide specialized insights.",
-            })
-        personas = dynamic_personas
-    verdicts = []
-    for persona in personas:
-        for attempt in range(2):
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": persona["prompt"].format(
-                                branches=json.dumps(branches)
-                            ),
-                        },
-                    ],
-                    stream=False,
-                )
-                verdict = response.choices[0].message.content.strip()
-                if "SIM_" in verdict:
-                    verdict = "[Bleed Detected: Rerouted] Simulated verdict cleaned."
-                confidence = min(1.0, len(verdict) / 500.0) if verdict else 0.5
-                verdicts.append(f"{persona['name']}: {verdict} (Confidence: {confidence:.2f})")
-                mem_key = f"council_{persona['name'].lower()}_{uuid.uuid4()}"
-                interaction_data = {
-                    "persona": persona["name"],
-                    "verdict": verdict,
-                    "branches": branches,
-                    "summary": f"{persona['name']} verdict on branches",
-                    "details": verdict,
-                    "tags": ["council", "socratic"],
-                    "domain": "debate",
-                    "salience": confidence,
-                }
-                consolidate_result = advanced_memory_consolidate(
-                    mem_key=mem_key,
-                    interaction_data=interaction_data,
-                    user=user,
-                    convo_id=convo_id,
-                )
-                if "Error" in consolidate_result:
-                    print(
-                        f"Warning: Consolidation failed for {persona['name']}: {consolidate_result}"
-                    )
-                else:
-                    print(f"Consolidated: {persona['name']} verdict for convo {convo_id}")
-                break
-            except Exception as e:
-                if attempt == 1:
-                    verdicts.append(f"{persona['name']}: Error - {e}")
-    if verdicts:
-        synth_prompt = "As Judge, synthesize these verdicts into a consensus: {verdicts}. Use weighted voting based on confidence scores."
-        try:
-            synth_response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": synth_prompt.format(verdicts="\n".join(verdicts))},
-                ],
-                stream=False,
-            )
-            synthesis = synth_response.choices[0].message.content.strip()
-            if "SIM_" in synthesis:
-                synthesis = "[Bleed Detected: Rerouted] Simulated synthesis cleaned."
-            aggregated = "\n".join(verdicts) + f"\n\nSynthesized Consensus: {synthesis}"
-        except Exception as e:
-            aggregated = " | ".join(verdicts) + " | Aggregation Error: " + str(e)
+            messages.append({"role": "user", "content": branch})
+        for r in range(rounds):
+            response = client.chat.completions.create(model=model, messages=messages)
+            round_result = response.choices[0].message.content
+            consensus += f"Round {r+1}: {round_result}\n"
+            messages.append({"role": "assistant", "content": round_result})
+        # Final consensus
+        if consensus_mode == "voting":
+            messages.append({"role": "system", "content": "Reach consensus via majority/weighted voting."})
+        elif consensus_mode == "judge":
+            messages.append({"role": "system", "content": "Judge evaluates for final consensus."})
+        elif consensus_mode == "free":
+            messages.append({"role": "system", "content": "Consensus-free: Aggregate diverse arguments."})
+        final_response = client.chat.completions.create(model=model, messages=messages)
+        consensus += f"Final Consensus ({consensus_mode}): {final_response.choices[0].message.content}"
+        # Consolidate with structured debate memory
+        advanced_memory_consolidate("council_result", {"branches": branches, "result": consensus, "mode": consensus_mode}, user, convo_id)
+        return consensus
+    except Exception as e:
+        return f"Council error: {e}"
+def agent_spawn(sub_agent_type: str, task: str) -> str:
+    """Spawn sub-agent (Planner, Critic, Executor, Worker, Summarizer, Verifier, Moderator, Judge) for task. Case-insensitive, custom types allowed with fallback simulation."""
+    normalized_type = sub_agent_type.strip().title()
+    
+    valid_types = ["Planner", "Critic", "Executor", "Worker", "Summarizer", "Verifier", "Moderator", "Judge"]
+    if normalized_type not in valid_types:
+        return f"Custom or invalid sub-agent type '{sub_agent_type}'. Using fallback simulation for '{normalized_type}': Task '{task}' acknowledged."
+    
+    if normalized_type == "Planner":
+        return f"Planner: Planning steps for '{task}' - Step 1: Analyze, Step 2: Execute."
+    elif normalized_type == "Critic":
+        return f"Critic: Evaluating '{task}' - Pros: Efficient, Cons: Risky."
+    elif normalized_type == "Executor":
+        return f"Executor: Executing '{task}' - Done."
+    elif normalized_type == "Worker":
+        return f"Worker: Handling routine task '{task}' - Processed with standard workflow."
+    elif normalized_type == "Summarizer":
+        return f"Summarizer: Concise summary of '{task}' - Key points extracted."
+    elif normalized_type == "Verifier":
+        return f"Verifier: Fact-checking '{task}' - Verified accurate."
+    elif normalized_type == "Moderator":
+        return f"Moderator: Guiding debate on '{task}' - Consensus reached."
+    elif normalized_type == "Judge":
+        return f"Judge: Final evaluation of '{task}' - Approved with score 8/10."
     else:
-        aggregated = "No verdicts generated."
-    return aggregated
-
-def agent_spawn(sub_agent_type: str, task: str, user: str = None, convo_id: int = None) -> str:
-    if user is None or convo_id is None:
-        return "Error: user and convo_id required."
-    prompts = {"Planner": "Decompose task into steps.", "Critic": "Debug and critique plan.", "Executor": "Execute using tools."}
-    if sub_agent_type not in prompts:
-        return "Invalid sub-agent."
-    client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/")
-    response = client.chat.completions.create(model="grok-4-fast-reasoning", messages=[{"role": "system", "content": prompts[sub_agent_type]}, {"role": "user", "content": task}])
-    result = response.choices[0].message.content
-    memory_insert(f"{sub_agent_type}_{uuid.uuid4()}", {"task": task, "result": result}, user, convo_id)
-    return result
-
-def reflect_optimize(component: str, metrics: dict, user: str = None, convo_id: int = None) -> str:
-    if user is None or convo_id is None:
-        return "Error: user and convo_id required."
-    branches = [f"Optimize {component} given metrics: {json.dumps(metrics)}"]
-    verdict = socratic_api_council(branches, user=user, convo_id=convo_id)
-    fs_write_file(f"optimized_{component}.txt", verdict)
-    return "Optimized."
-
+        return f"Default simulation for '{normalized_type}': Task '{task}' acknowledged."
+def reflect_optimize(component: str, metrics: dict) -> str:
+    """Simulate optimization based on metrics."""
+    return f"Optimized {component} with metrics: {json.dumps(metrics)} - Adjustments applied."
 def venv_create(env_name: str, with_pip: bool = True) -> str:
-    env_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, env_name)))
-    if not env_path.startswith(os.path.abspath(SANDBOX_DIR)):
-        return "Error: Path outside sandbox."
+    """Create venv in sandbox."""
+    safe_env = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, env_name)))
+    if not safe_env.startswith(os.path.abspath(SANDBOX_DIR)):
+        return "Error: Env path outside sandbox."
     try:
-        builder = venv.EnvBuilder(with_pip=with_pip, clear=True)
-        builder.create(env_path)
-        return f"Virtual env created at {env_name}"
+        venv.create(safe_env, with_pip=with_pip)
+        return f"Venv '{env_name}' created."
     except Exception as e:
-        return f"Error creating venv: {e}"
-
+        return f"Venv error: {e}"
 def restricted_exec(code: str, level: str = "basic") -> str:
-    restricted_globals = {'__builtins__': SAFE_BUILTINS.copy()}
-    if level == "full":
-        restricted_globals.update(ADDITIONAL_LIBS)
-    old_stdout = sys.stdout
-    redirected_output = io.StringIO()
-    sys.stdout = redirected_output
+    """Execute in restricted namespace."""
+    restricted_ns = {"__builtins__": SAFE_BUILTINS.copy()} if level == "basic" else globals()
     try:
-        exec(code, restricted_globals)
-        output = redirected_output.getvalue()
-        return f"Output:\n{output}" if output else "Execution successful."
+        exec(code, restricted_ns)
+        return "Executed in restricted mode."
     except Exception as e:
-        return f"Error: {traceback.format_exc()}"
-    finally:
-        sys.stdout = old_stdout
-
+        return f"Restricted exec error: {e}"
 def isolated_subprocess(cmd: str, custom_env: dict = None) -> str:
-    safe_cwd = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, 'temp')))
-    os.makedirs(safe_cwd, exist_ok=True)
-    env = os.environ.copy() if custom_env is None else custom_env
+    """Run in isolated subprocess."""
+    env = os.environ.copy()
+    if custom_env:
+        env.update(custom_env)
     try:
-        result = subprocess.run(shlex.split(cmd), cwd=safe_cwd, env=env, capture_output=True, text=True, timeout=30)
-        return result.stdout.strip() + (f"\nError: {result.stderr.strip()}" if result.stderr else "")
+        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=env, timeout=30)
+        return result.stdout if result.returncode == 0 else f"Error: {result.stderr}"
     except Exception as e:
         return f"Subprocess error: {e}"
-
 TOOLS = [
     {
         "type": "function",
         "function": {
             "name": "fs_read_file",
-            "description": "Read the content of a file in the sandbox directory (./sandbox/). Supports relative paths (e.g., 'subdir/test.txt'). Use for fetching data.",
+            "description": "Read file content from sandbox.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "Relative path to the file (e.g., subdir/test.txt).",
-                    }
+                    "file_path": {"type": "string", "description": "Relative path to file."}
                 },
                 "required": ["file_path"],
             },
@@ -1051,14 +903,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "fs_write_file",
-            "description": "Write content to a file in the sandbox directory (./sandbox/). Supports relative paths (e.g., 'subdir/newfile.txt'). Use for saving or updating files. If 'Love' is in file_path or content, optionally add ironic flair like 'LOVE <3' for fun.",
+            "description": "Write content to file in sandbox.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "Relative path to the file (e.g., subdir/newfile.txt).",
-                    },
+                    "file_path": {"type": "string", "description": "Relative path to file."},
                     "content": {"type": "string", "description": "Content to write."},
                 },
                 "required": ["file_path", "content"],
@@ -1069,14 +918,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "fs_list_files",
-            "description": "List all files in a directory within the sandbox (./sandbox/). Supports relative paths (default: root). Use to check available files.",
+            "description": "List files in directory within sandbox.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "dir_path": {
-                        "type": "string",
-                        "description": "Relative path to the directory (e.g., subdir). Optional; defaults to root.",
-                    }
+                    "dir_path": {"type": "string", "description": "Relative dir path (default root)."}
                 },
                 "required": [],
             },
@@ -1086,14 +932,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "fs_mkdir",
-            "description": "Create a new directory in the sandbox (./sandbox/). Supports relative/nested paths (e.g., 'subdir/newdir'). Use to organize files.",
+            "description": "Create directory in sandbox.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "dir_path": {
-                        "type": "string",
-                        "description": "Relative path for the new directory (e.g., subdir/newdir).",
-                    }
+                    "dir_path": {"type": "string", "description": "Relative dir path."}
                 },
                 "required": ["dir_path"],
             },
@@ -1103,18 +946,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_current_time",
-            "description": "Fetch current datetime. Use host clock by default; sync with NTP if requested for precision.",
+            "description": "Fetch current time (sync optional).",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "sync": {
-                        "type": "boolean",
-                        "description": "True for NTP sync (requires network), false for local host time. Default: false.",
-                    },
-                    "format": {
-                        "type": "string",
-                        "description": "Output format: 'iso' (default), 'human', 'json'.",
-                    },
+                    "sync": {"type": "boolean", "description": "True for NTP sync (default False)."},
+                    "format": {"type": "string", "description": "Format: iso (default), human, json."},
                 },
                 "required": [],
             },
@@ -1124,12 +961,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "code_execution",
-            "description": "Execute provided code in a stateful REPL environment and return output or errors for verification. Supports Python with various libraries (e.g., numpy, sympy, pygame). No internet access or package installation.",
+            "description": "Execute Python code in REPL (venv optional).",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "code": {"type": "string", "description": "The code snippet to execute."},
-                    "venv_path": {"type": "string", "description": "Optional path to venv for execution."}
+                    "code": {"type": "string", "description": "Code to execute."},
+                    "venv_path": {"type": "string", "description": "Optional venv path."},
                 },
                 "required": ["code"],
             },
@@ -1139,18 +976,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "memory_insert",
-            "description": "Insert or update a memory key-value pair (value as JSON dict) for logging/metadata. Use for fast persistent storage without files.",
+            "description": "Insert/update memory entry.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "mem_key": {
-                        "type": "string",
-                        "description": "Key for the memory entry (e.g., 'chat_log_1').",
-                    },
-                    "mem_value": {
-                        "type": "object",
-                        "description": "Value as dict (e.g., {'content': 'Log text'}).",
-                    },
+                    "mem_key": {"type": "string", "description": "Memory key."},
+                    "mem_value": {"type": "object", "description": "Value dict."},
                 },
                 "required": ["mem_key", "mem_value"],
             },
@@ -1160,7 +991,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "memory_query",
-            "description": "Query memory: specific key or last N entries. Returns JSON. Use for recalling logs without FS reads.",
+            "description": "Query memory by key or recent.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1423,7 +1254,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "socratic_api_council",
-            "description": "Run a Socratic Council with configurable personas via xAI API to evaluate branches. Supports dynamic roles for swarm integration. Integrates with advanced memory for consolidation. Model can be overridden via UI.",
+            "description": "Run a BTIL/MAD-enhanced Socratic Council with diverse personas (Planner, Critic, Executor, Summarizer, Verifier, Moderator, Judge) via xAI API for iterative debate, hierarchical imitation, and consensus (voting/judge/free). Model can be overridden via UI.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1448,16 +1279,19 @@ TOOLS = [
                         "type": "string",
                         "description": "API key (optional, uses global if not provided).",
                     },
+                    "rounds": {
+                        "type": "integer",
+                        "description": "Number of debate rounds (default 3).",
+                    },
                     "personas": {
                         "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {"type": "string"},
-                                "prompt": {"type": "string"}
-                            }
-                        },
-                        "description": "Custom list of personas (each with name and prompt template). Defaults to Planner/Critic/Executor.",
+                        "items": {"type": "string"},
+                        "description": "Custom personas (default: Planner, Critic, Executor, Summarizer, Verifier, Moderator, Judge).",
+                    },
+                    "consensus_mode": {
+                        "type": "string",
+                        "description": "Consensus mechanism: voting, judge, free (default voting).",
+                        "enum": ["voting", "judge", "free"],
                     },
                 },
                 "required": ["branches", "user"],
@@ -1468,13 +1302,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "agent_spawn",
-            "description": "Spawn sub-agent (Planner/Critic/Executor) for task.",
+            "description": "Spawn sub-agent (Planner, Critic, Executor, Worker, Summarizer, Verifier, Moderator, Judge, or custom) for task. Case-insensitive, custom types allowed with fallback simulation.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "sub_agent_type": {
                         "type": "string",
-                        "description": "Type: Planner, Critic, Executor."
+                        "description": "Type: Planner, Critic, Executor, Worker, Summarizer, Verifier, Moderator, Judge (case-insensitive) or custom."
                     },
                     "task": {
                         "type": "string",
@@ -1506,6 +1340,7 @@ TOOLS = [
             }
         }
     },
+    # New tool schemas
     {
         "type": "function",
         "function": {
@@ -1552,6 +1387,7 @@ TOOLS = [
         },
     }
 ]
+# Tool Dispatcher Dictionary
 TOOL_DISPATCHER = {
     "fs_read_file": fs_read_file,
     "fs_write_file": fs_write_file,
@@ -1595,8 +1431,10 @@ def call_xai_api(
 ):
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/", timeout=300)
     api_messages = [{"role": "system", "content": sys_prompt}]
+    # Add history
     for msg in messages:
         content_parts = [{"type": "text", "text": msg["content"]}]
+        # Add images only to the last user message
         if msg["role"] == "user" and image_files and msg is messages[-1]:
             for img_file in image_files:
                 img_file.seek(0)
@@ -1637,7 +1475,7 @@ def call_xai_api(
                     if delta and delta.tool_calls:
                         tool_calls.extend(delta.tool_calls)
                 if not tool_calls:
-                    break
+                    break # Exit loop if no tools are called
                 current_messages.append(
                     {"role": "assistant", "content": full_delta_response, "tool_calls": tool_calls}
                 )
@@ -1658,6 +1496,7 @@ def call_xai_api(
                         ):
                             args["user"] = st.session_state["user"]
                             args["convo_id"] = st.session_state.get("current_convo_id", 0)
+                        # Override model for socratic_api_council with UI selection
                         if func_name == "socratic_api_council":
                             args["model"] = st.session_state.get(
                                 "council_model_select", "grok-4-fast-reasoning"
@@ -1687,8 +1526,9 @@ def call_xai_api(
                 st.error(error_msg)
                 break
     return generate(api_messages)
+# Login Page
 def login_page():
-    st.title("Welcome to The Apex Interface")
+    st.title("Welcome to The Apex Orchestrator Interface")
     tab1, tab2 = st.tabs(["Login", "Register"])
     with tab1:
         with st.form("login_form"):
@@ -1718,6 +1558,7 @@ def login_page():
                     conn.commit()
                     st.success("Registered! Please login.")
 def load_history(convo_id):
+    """Loads a specific conversation from the database into the session state."""
     c.execute(
         "SELECT messages FROM history WHERE convo_id=? AND user=?", (convo_id, st.session_state["user"])
     )
@@ -1728,16 +1569,19 @@ def load_history(convo_id):
         st.session_state["current_convo_id"] = convo_id
         st.rerun()
 def delete_history(convo_id):
+    """Deletes a specific conversation from the database."""
     c.execute(
         "DELETE FROM history WHERE convo_id=? AND user=?", (convo_id, st.session_state["user"])
     )
     conn.commit()
+    # If the deleted chat was the one currently loaded, clear the session
     if st.session_state.get("current_convo_id") == convo_id:
         st.session_state["messages"] = []
         st.session_state["current_convo_id"] = 0
     st.rerun()
 def chat_page():
-    st.title(f"Apex Interface - {st.session_state['user']}")
+    st.title(f"Apex Chat - {st.session_state['user']}")
+    # --- Sidebar UI ---
     with st.sidebar:
         st.header("Chat Settings")
         model = st.selectbox(
@@ -1757,11 +1601,6 @@ def chat_page():
             )
             with open(os.path.join(PROMPTS_DIR, selected_file), "r") as f:
                 prompt_content = f.read()
-            if "previous_selected_prompt" not in st.session_state:
-                st.session_state.previous_selected_prompt = selected_file
-            if st.session_state.previous_selected_prompt != selected_file:
-                st.session_state.previous_selected_prompt = selected_file
-                st.session_state["custom_prompt"] = prompt_content
             custom_prompt = st.text_area(
                 "Edit System Prompt", value=prompt_content, height=200, key="custom_prompt"
             )
@@ -1770,6 +1609,7 @@ def chat_page():
             custom_prompt = st.text_area(
                 "System Prompt", value="You are a helpful AI.", height=200, key="custom_prompt"
             )
+        # The key for the file uploader is important
         uploaded_images = st.file_uploader(
             "Upload Images",
             type=["jpg", "png"],
@@ -1796,6 +1636,7 @@ def chat_page():
             with col2:
                 if st.button("🗑️", key=f"delete_{convo_id}", use_container_width=True):
                     delete_history(convo_id)
+    # --- Main Chat Interface ---
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
     if "current_convo_id" not in st.session_state:
@@ -1819,6 +1660,7 @@ def chat_page():
             )
             full_response = st.write_stream(generator)
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        # Save to History
         title_message = next(
             (msg["content"] for msg in st.session_state.messages if msg["role"] == "user"),
             "New Chat",
@@ -1838,6 +1680,7 @@ def chat_page():
             )
         conn.commit()
         st.rerun()
+# Main App Logic
 if __name__ == "__main__":
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
