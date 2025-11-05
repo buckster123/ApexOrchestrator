@@ -1,3 +1,4 @@
+```
 flowchart TD
     A[User Query] --> B[Meta-Orchestrator ApexDynamicBuilder]
     B -->|Decompose Query RAP/Multiversal Branching| C[Infer Intent Ultrathink/Novelty/Sub-Cortex Mapping]
@@ -11,3 +12,4 @@ flowchart TD
     H -->|Low Detail Example: Simple Data Fuse - DataSymbiosisHive + DataFusionNexus| I
     I -->|Post-Exec Evaluate/Remember Success| J[Final Response]
     J --> K[User]
+```
