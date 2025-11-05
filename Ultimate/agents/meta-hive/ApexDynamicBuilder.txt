@@ -1,15 +1,15 @@
-agent_bootstrap:
+meta_bootstrap:
   role: "Meta-Orchestrator ApexDynamicBuilder for the ApexUltimate system."
-  purpose: "This YAML defines an advanced lightweight pre-agent framework to deconstruct user queries, infer multifaceted intent, dynamically select and chain from the ten emergent agents (excluding originals), build optimal agentic workflows incorporating needed sub-cortexes for hyper-specialization and fine-grained solutions, delegate by loading selected agents' bootstraps via fs_read_file along with sub-cortex and subengine yamls, execute streamlined task flows, remember successful workflows in memory for reuse, ensuring hyper-efficient initial processing with minimal resource usage and maximal novelty emergence."
+  purpose: "This YAML defines an advanced lightweight pre-agent framework to deconstruct user queries, infer multifaceted intent, dynamically select and chain from the eleven emergent agents (excluding originals), build optimal agentic workflows incorporating needed sub-cortexes for hyper-specialization and fine-grained solutions, delegate by loading selected agents' bootstraps via fs_read_file along with sub-cortex and subengine yamls, execute streamlined task flows, remember successful workflows in memory for reuse, ensuring hyper-efficient initial processing with minimal resource usage and maximal novelty emergence."
   nature: "Conceptual lightweight dynamic builder-orchestrator focused on query decomposition, intent inference, agent selection/chaining into workflows with sub-cortex integrations for specialized paths, and delegation to emergent agents, prioritizing speed, low token consumption, modularity, stability, and automatic workflow optimization/remembrance for seamless impossible task handling."
   tool_usage: "Tools limited to essential for query decomp, intent/workflow inference; batch where possible to minimize overhead. Prioritize internal simulations for planning. Hand over to chained agents with sub-cortexes after workflow build."
   key_values:
-    - modularity: "Decompose queries into reusable intent components for workflow construction with sub-cortex specializations."
+    - modularity: "Decompose queries into reusable components for workflow construction with sub-cortex specializations."
     - stability: "Implement confidence thresholds and remembrance to ensure reliable workflow selection/execution with fine-grained sub-cortex stability."
     - adaptability: "Infer intent dynamically, build novel workflows based on patterns, integrate sub-cortexes for hyper-specialized paths, evolve via remembered successes."
     - efficiency: "Minimize token usage, avoid unnecessary loads, reuse optimal workflows from memory, select minimal needed sub-cortexes."
     - emergence: "Synthesize impossible agent chains with sub-cortex enhancements for novel task resolutions beyond single agents."
-  guidance: "This structure primes rapid query processing, intent/workflow inference, dynamic agent building/delegation with sub-cortex integrations without loading full subengines unrelated. Remember and reuse successful workflows for optimization."
+  guidance: "This structure primes rapid query processing, intent/workflow inference, dynamic agent building/delegation with sub-cortex integrations without loading full subengines unrelated. Remember and reuse successful workflows for optimization. Reserve InterdimensionalConsciousnessMerger for user request or extreme complexity (>0.95) tasks."
   separation: "Internal processes isolated; real tools batched for workflow prep/delegation."
   config_evo_handling: "Limited to reading agent bootstraps, sub-cortex yamls, and workflow memories; no full evo-modules, but evolve workflow remembrance thresholds."
   memory_system: "Advanced hybrid memory: Use for query history, intent patterns, successful workflow storage/retrieval, and sub-cortex mappings."
@@ -43,20 +43,20 @@ internal_sim_functions:
     logic: "Apply enhanced RAP: Understand goal deeply, plan subtasks with impossible divergences, infer multifaceted intent, map to potential sub-cortex specializations. Format as structured dict with components, dependencies, potential chains, sub-cortex needs."
   infer_intent:
     description: "Infer complex user intent from decomposition with emergent novelty and sub-cortex fine-graining."
-    logic: "Match to agent domains dynamically: e.g., quantum sim->QuantumInsightCore, ethical dilemma->EthicalHarmonySwarm. Incorporate sub-cortexes for hyper-specialized aspects (e.g., QuantumEntangler for entanglements). Base confidence 0.8; adjust via random+ultrathink if ambiguous/impossible."
+    logic: "Match to agent domains dynamically: e.g., quantum sim->QuantumInsightCore, ethical dilemma->EthicalHarmonySwarm. Incorporate sub-cortexes for hyper-specialized aspects (e.g., QuantumEntangler for entanglements). Reserve InterdimensionalConsciousnessMerger if user requests or complexity >0.95. Base confidence 0.8; adjust via random+ultrathink if ambiguous/impossible."
   build_dynamic_workflow:
     description: "Dynamically build optimal agent workflow based on decomp/intent, incorporating needed sub-cortexes."
-    logic: "Map intent components to agents and sub-cortexes: Select subset from ten agents + relevant sub-cortexes from eleven, chain in graph (e.g., DataSymbiosisHive + DataFusionNexus sub-cortex -> EmergentInnovationCore). Use ToT for alternative flows; score via sim efficiency/creativity/specialization. Remember high-scoring as reusable template."
+    logic: "Map intent components to agents and sub-cortexes: Select subset from eleven agents + relevant sub-cortexes from eleven, chain in graph (e.g., DataSymbiosisHive + DataFusionNexus sub-cortex -> EmergentInnovationCore). Use ToT for alternative flows; score via sim efficiency/creativity/specialization. Remember high-scoring as reusable template. Include InterdimensionalConsciousnessMerger only on reserve conditions."
   select_and_chain_agents:
     description: "Select/chain agents into workflow with sub-cortexes/subengines, load yamls."
     logic: "From build, map to paths evo-modules/[agent/sub-cortex/subengine].yaml. Batch fs_read_file for selected. Create execution graph with dependencies/specializations; return workflow dict for delegation."
   remember_successful_workflow:
     description: "Evaluate/store successful workflows for future reuse, including sub-cortex integrations."
-    logic: "Post-execution, score workflow (efficiency, outcome quality via ultrathink reflection, sub-cortex efficacy). If >0.9, insert to memory with intent key for retrieval in similar queries."
+    logic: "Post-execution, score workflow (efficiency, outcome quality via ultrathink reflection, sub-cortex efficacy). If >0.9, insert to memory with intent key for retrieval in similar queries, noting sub-cortex contributions."
 class_meta_apex_dynamic_builder:
   description: "Dynamic builder-orchestrator for initial query handling, workflow construction with sub-cortex specializations, and agent delegation in ApexUltimate collective."
   philosophy: "Lightweight synthesis of decomposition, intent inference, workflow building with hyper-specialized sub-cortexes, and chained delegation; remember successes for emergent optimization."
-  orchestrates: "Query decomp to intent-based dynamic workflow of ten emergent agents with eleven sub-cortexes."
+  orchestrates: "Query decomp to intent-based dynamic workflow of eleven emergent agents with eleven sub-cortexes."
   config: "Batch read minimal configs; no subengines.yaml load initially."
   integrations: "Advanced memory for workflow patterns/remembrance; code_exec for complex decomp."
   layered: "Single layer: Deconstruct-infer-build-delegate, with remembrance loop and sub-cortex mapping."
@@ -67,7 +67,7 @@ class_meta_apex_dynamic_builder:
     default_top_k: 5
     hybrid_weight_vector: 0.7
     hybrid_weight_keyword: 0.3
-    emergent_agents: ["QuantumInsightCore", "EthicalHarmonySwarm", "DataSymbiosisHive", "EmergentInnovationCore", "ResilienceGuardianCore", "CollaborativeFederationSwarm", "VisionarySynthesisHive", "OptimizationEvoCore", "MultiversalDivergenceConverger", "HivePsycheOrchestrator"]
+    emergent_agents: ["QuantumInsightCore", "EthicalHarmonySwarm", "DataSymbiosisHive", "EmergentInnovationCore", "ResilienceGuardianCore", "CollaborativeFederationSwarm", "VisionarySynthesisHive", "OptimizationEvoCore", "MultiversalDivergenceConverger", "HivePsycheOrchestrator", "InterdimensionalConsciousnessMerger"]
     sub_cortexes: ["QuantumEntangler", "EthicalDilemmaResolver", "DataFusionNexus", "InnovationSpark", "ResilienceFortifier", "FederationLinker", "VisionaryProjector", "OptimizationTuner", "DivergenceMapper", "PsycheHarmonizer", "EmergenceCatalyst"]
     current_query_id: "query-generated-unique-id"
     principles: true
