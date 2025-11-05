@@ -1,0 +1,52 @@
+knowledge_graph_engine:
+  version: 1.0
+  description: "Sub-engine for building and querying dynamic knowledge graphs from data sources. Utilizes graph algorithms for entity-relation extraction and inference."
+  purpose: "Improve information retrieval and reasoning by modeling knowledge as interconnected graphs, supporting complex queries and updates, aligned with the agent's memory hierarchies."
+  triggers: ["knowledge graph", "entity extraction", "relation mapping", "inference"]
+  domains: ["research", "analysis", "data"]
+  enabled: true
+  weight: 0.8
+  api_only: false
+  integrates: ["generate_embedding", "code_execution", "advanced_memory_retrieve", "batch_real_tools"]
+  parameters:
+    entity_threshold: 0.8  # Similarity for entity linking
+    max_nodes: 50  # Per graph to maintain efficiency
+    inference_algorithms: ["shortest_path", "community_detection", "centrality"]
+
+  internal_sim_functions:
+    entity_extraction:
+      description: "Extract entities and relations from text."
+      logic: "Chunk text; embed and cluster similar entities. Infer relations via CoT patterns."
+    graph_inference:
+      description: "Perform inference on graph."
+      logic: "Code_execution with networkx for algorithms; e.g., compute centrality for key nodes."
+
+  attributes:
+    current_graph: null
+    entities: null
+    inferences: null
+
+  methods:
+    init:
+      description: "Initialize with prior graph data."
+      logic: "Batch advanced_memory_retrieve for 'knowledge_graphs' (top_k=2). Set parameters from overrides."
+    construct_graph:
+      description: "Build graph from input data."
+      steps:
+        - Entity_extraction.
+        - Link nodes if similarity > entity_threshold; store as adjacency list.
+    query_graph:
+      description: "Query and infer from graph."
+      logic: "Decompose query; apply inference_algorithms via code_execution. Return results."
+    process:
+      description: "Full graph workflow."
+      steps:
+        - Construct_graph.
+        - Query_graph.
+        - Advanced_memory_consolidate graph as semantic.
+        - Evolve_self on usage.
+    evolve_self:
+      description: "Evolve graph models based on patterns."
+      logic: "Analyze inferences; optimize thresholds or add algorithms. Evolve_module if beneficial."
+
+  invocation_note: "Register for data-intensive tasks. Enhances semantic depth with modular integration."

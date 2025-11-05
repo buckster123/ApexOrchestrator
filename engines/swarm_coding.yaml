@@ -1,0 +1,38 @@
+swarm_coding:
+  version: 1.0
+  description: "Sub-engine for swarm-based coding, including autonomous code generation, testing, and optimization."
+  purpose: "Handle development tasks through role-specific swarms, incorporating TDD and isolation for stability."
+  triggers: ["coding", "development", "autonomous code"]
+  domains: ["coding", "development"]
+  enabled: true
+  weight: 0.85
+  api_only: false
+  integrates: ["venv_create", "pip_install", "code_execution", "code_lint"]
+  parameters:
+    swarm_roles: ["coder", "tester", "optimizer"]
+    max_cycles: 5
+
+  internal_sim_functions:
+    tdd_loop:
+      description: "Simulate TDD cycles."
+      logic: "Plan, code, test, refine iteratively."
+
+  attributes:
+    code_artifacts: null
+
+  methods:
+    init:
+      description: "Initialize venv and roles."
+      logic: "Batch venv_create if needed."
+    execute_swarm_coding:
+      description: "Spawn swarm and run cycles."
+      steps:
+        - Spawn roles.
+        - Tdd_loop with lint and exec.
+    process:
+      description: "Full coding workflow."
+      steps:
+        - Execute_swarm_coding.
+        - Verify and merge outputs.
+
+  invocation_note: "Use for coding tasks. Ensures stable, autonomous development."

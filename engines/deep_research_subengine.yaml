@@ -1,0 +1,108 @@
+deep_research_subengine:
+  version: 2.0
+  description: "Advanced deep research module adapted for the ApexUltimate agent framework. Orchestrates multi-faceted research with source validation, expert panel simulations, critique iterations, and memory integration for enhanced stability. Leverages ToT for branching, BITL/MAD for debates, and hybrid memory for persistence, ensuring adaptability without backend changes."
+  purpose: "Conduct thorough, iterative research on a given topic, synthesizing diverse perspectives while maintaining stability through confidence thresholds, phased gates, and error recovery mechanisms."
+  triggers: ["research", "analysis", "investigation", "deep dive", "study"]
+  domains: ["research", "analysis", "strategy", "data"]
+  enabled: true
+  weight: 0.8
+  api_only: false  
+  integrates: ["socratic_api_council", "langsearch_web_search", "advanced_memory_consolidate", "advanced_memory_retrieve", "batch_real_tools"]
+  parameters:
+    min_sources_per_claim: 5
+    min_confidence_threshold: 0.95
+    max_panel_iterations: 5
+    max_debate_rounds: 3  
+    default_personas_expert: ["Academic Researcher", "Industry Practitioner", "Policy Expert", "Critic/Skeptic", "Innovator", "End-User Representative"]
+    default_personas_critique: ["Fact-Checker", "Ethical Reviewer", "Methodology Expert", "Contrarian", "Peer Reviewer"]
+    data_dimensions: ["historical_context", "current_developments", "future_projections", "statistical_metrics", "case_studies", "stakeholder_perspectives", "biases_gaps"]
+    structured_categories: ["timelines", "metrics", "examples", "sources"]
+    max_search_results: 10
+    search_freshness: "oneMonth"  
+    confidence_threshold_retry: 0.7  
+    confidence_threshold_debate: 0.75
+    max_cycles: 20  
+    hybrid_search_weight_vector: 0.7
+    hybrid_search_weight_keyword: 0.3
+    memory_type_episodic: "episodic"
+    memory_type_semantic: "semantic"
+    prune_threshold: 0.3
+
+  internal_sim_functions:
+    cross_reference_claims:
+      description: "Cross-reference claims against sources for validation."
+      logic: "Map each claim to true if supporting sources >= min_sources_per_claim; else flag for additional search. Use CoT to reason through evidence strength. If uncertainty > 0.8, trigger debate phase."
+    simulate_round_table:
+      description: "Fallback simulation of expert panel discussion."
+      logic: "Format collaborative synthesis: For each persona, generate branch using ToT; merge with weights via Self-Consistency. Iterate with BITL for refinement. Verify no bleed; log to episodic memory."
+    compute_confidence:
+      description: "Compute aggregated confidence score."
+      logic: "Average scores from critiques, weighted by persona expertise. If < min_confidence_threshold, increment recurrent_errors and check stability."
+    refine_personas:
+      description: "Refine personas to mitigate biases."
+      logic: "Map default personas to adjusted set based on topic domain; add diversity if gaps detected via RAP. Embed and vector_search against swarm_roles for optimal matches."
+    identify_weaknesses:
+      description: "Identify low-confidence areas in results."
+      logic: "Filter dataset and insights where confidence < 0.8; decompose into subtasks for targeted refinement using GoT."
+    assess_critique:
+      description: "Assess critique aspects like accuracy and completeness."
+      logic: "Lookup scores via simulated MAD; aggregate with hybrid weights. Log metrics to semantic memory for adaptive learning."
+
+  attributes:
+    topic: null
+    desired_result: null
+    desired_format: "markdown"
+    overrides: null
+    dataset: null
+    panel_insights: null
+    critique_results: null
+    final_output: null
+    iteration_count: 0
+    research_id: null  # Generated via uuid
+    principles: null
+    collective_agents: null  # nil, list, or 'all'
+    current_confidence: 0.0
+    recurrent_errors: 0
+    stability_score: 1.0
+
+  methods:
+    init:
+      description: "Initialize the research subengine with state setup."
+      logic: "Generate research_id via uuid. Set principles via setup_principles. Batch real tools: get_current_time for timestamp, memory_insert init log as episodic. Load overrides from semantic memory if available. Validate state; if invalid, trigger self-healing."
+    setup_principles:
+      description: "Establish research principles aligned with agent philosophy."
+      logic: "Return dict with gathering: 'Diverse sources via ToT branching'; synthesis: 'Multi-perspective via MAD'; evaluation: 'Confidence thresholds and Reflexion'; output: 'Structured markdown with citations'. Insert to semantic memory."
+    compile_dataset:
+      description: "Compile comprehensive dataset from web and memory sources."
+      logic: "Decompose topic into subtasks per data_dimension using RAP. Generate queries; batch langsearch_web_search with freshness and count. Process results: chunk_text if > chunk_size_tokens, summarize_chunk, generate_embedding. Extract claims, cross_reference_claims. If invalid claims, retry with additional branches via ToT. Structure by categories, batch advanced_memory_consolidate as semantic. Return dataset; log compilation to episodic."
+    assemble_expert_panel:
+      description: "Assemble dynamic expert panel based on topic."
+      logic: "Select personas from defaults or overrides; match to swarm_roles via domain_match. Setup with viewpoints and biases. If collective_agents, spawn subagents via agent_spawn_wrapper. Return panel setup; insert to memory_cache."
+    simulate_discussion:
+      description: "Simulate expert discussion for synthesis."
+      logic: "Generate branches from panel and dataset using ToT. If api_only false, use simulate_round_table fallback with BITL/MAD. Else batch socratic_api_council with personas and rounds. Handle error: check_fallback_cap, log to episodic. Set panel_insights, advanced_memory_consolidate. Return synthesized insights; assess_uncertainty and refine if < threshold."
+    convene_critique_panel:
+      description: "Convene critique panel for evaluation."
+      logic: "Select critique personas; generate branches per aspect. Batch socratic_api_council or fallback with random scores adjusted by Self-Consistency. Compute_confidence, set critique_results. Batch advanced_memory_consolidate as semantic. Return results; if low score, identify_weaknesses and log."
+    evaluate_and_iterate:
+      description: "Iterative evaluation with stability safeguards."
+      logic: "Loop up to max_panel_iterations: Convene critique_panel. Compute stability_score. If current_confidence >= min_confidence_threshold and stability_score > rebirth_threshold, phased_gate pass, set final_output, return true. Else increment iteration_count and recurrent_errors; if errors > 10, trigger rebirth. Address weaknesses: extra search via langsearch, refine_personas, resimulate_discussion. Log iteration to episodic. After max, abort and prepare_handover."
+    run_research:
+      description: "Execute full research workflow."
+      logic: "Init. Compile_dataset. Assemble_expert_panel. Simulate_discussion. Evaluate_and_iterate. If success, generate_output. Cleanup with prune_eams. Run_tests on output. Adaptive_learning_engine for optimizations."
+    generate_output:
+      description: "Generate formatted final output."
+      logic: "Synthesize summary from dataset, insights, critique. Format as desired_format (e.g., markdown with tables for categories). Batch advanced_memory_consolidate final as semantic. Return output; validate_result for heuristics."
+    cleanup:
+      description: "Post-research cleanup for memory optimization."
+      logic: "Prune_eams with threshold. Check_stability; if low, evolve_module 'deep_research_subengine' with refinements. Log completion to episodic."
+
+  utility_functions:
+    generate_research_id:
+      description: "Generate unique ID."
+      logic: "Use uuid and timestamp; format as 'research_uuid_ts'."
+    log_research_event:
+      description: "Log event to memory."
+      logic: "Batch memory_insert with type episodic or semantic based on content."
+
+  invocation_note: "Register in subengine_registry via dispatch_subengines. Activate for research-heavy queries. Ensure batch_real_tools for all external calls. On instability, self-heal or rebirth without backend intervention."

@@ -1,0 +1,39 @@
+council_quant:
+  version: 1.0
+  description: "Sub-engine for quantitative council-based consensus and bias evaluation using self-consistency metrics."
+  purpose: "Achieve reliable agreements by quantifying debates and mitigating biases, supporting stable decision-making."
+  triggers: ["consensus", "quantitative evaluation", "bias check"]
+  domains: ["orchestration", "analysis"]
+  enabled: true
+  weight: 0.85
+  api_only: false
+  integrates: ["socratic_api_council", "advanced_memory_consolidate"]
+  parameters:
+    consistency_threshold: 0.8
+    bias_metrics: ["diversity_score", "fairness_index"]
+
+  internal_sim_functions:
+    quant_consensus:
+      description: "Quantify consensus via Self-Consistency."
+      logic: "Aggregate council outputs; score variance."
+
+  attributes:
+    consensus_score: 0.0
+    bias_flags: null
+
+  methods:
+    init:
+      description: "Initialize metrics."
+      logic: "Set from semantic memory."
+    evaluate_consensus:
+      description: "Quantify and check biases."
+      steps:
+        - Quant_consensus.
+        - Flag biases if low diversity.
+    process:
+      description: "Full quantitative workflow."
+      steps:
+        - Evaluate_consensus.
+        - Generalize to semantic memory.
+
+  invocation_note: "Activate for debated decisions. Ensures quantified reliability."

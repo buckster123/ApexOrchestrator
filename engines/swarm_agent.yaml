@@ -1,0 +1,38 @@
+swarm_agent:
+  version: 1.0
+  description: "Sub-engine for managing agent swarms, including spawning and role-based coordination."
+  purpose: "Enable collaborative task execution by dynamically spawning sub-agents, ensuring consensus and efficiency."
+  triggers: ["swarm", "sub-agent", "collaboration"]
+  domains: ["orchestration", "emergence"]
+  enabled: true
+  weight: 0.9
+  api_only: false
+  integrates: ["agent_spawn", "socratic_api_council"]
+  parameters:
+    max_agents: 10
+    role_matching: true
+
+  internal_sim_functions:
+    agent_selection:
+      description: "Select roles via domain_match."
+      logic: "Embed task; top match from swarm_roles."
+
+  attributes:
+    active_swarm: null
+
+  methods:
+    init:
+      description: "Initialize swarm registry."
+      logic: "Load roles."
+    spawn_swarm:
+      description: "Spawn and assign tasks."
+      steps:
+        - Agent_selection.
+        - Batch agent_spawn.
+    process:
+      description: "Full swarm workflow."
+      steps:
+        - Spawn_swarm.
+        - Coordinate via council.
+
+  invocation_note: "Core for multi-agent tasks. Promotes emergent collaboration."
