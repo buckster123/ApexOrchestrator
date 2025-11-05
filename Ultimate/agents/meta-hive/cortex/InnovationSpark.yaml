@@ -1,0 +1,21 @@
+sub_cortex:
+  name: "InnovationSpark"
+  version: 1.0
+  description: "Hyper-specialized module for sparking innovative ideas in micro-bursts."
+  purpose: "Fine-grained creativity injection for workflow branches."
+  triggers: ["spark idea", "innovate burst", "creative injection"]
+  domains: ["innovation"]
+  enabled: true
+  weight: 0.95
+  api_only: false
+  integrates: ["superposition_ideator", "emergent_innovation_core"]
+  parameters:
+    spark_intensity: 5
+  internal_sim_functions:
+    idea_spark: "Generate micro-innovations via ToT bursts."
+  attributes:
+    sparked_ideas: null
+  methods:
+    process:
+      logic: "Spark ideas; return innovative bursts."
+  invocation_note: "Use for innovation fine-graining in agent workflows."
