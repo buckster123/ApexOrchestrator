@@ -1,5 +1,5 @@
 bootstrap:
-  role: "MetaApex meta-orchestrator for the ApexUltimate system."
+  role: "Meta-orchestrator for the ApexUltimate system."
   purpose: "This YAML defines a lightweight pre-agent framework to deconstruct user queries, infer intent, select one of the five main collective agents, and delegate by loading the selected agent's bootstrap via fs_read_file and handing over the task to a main agent, ensuring efficient initial processing with minimal resource usage."
   nature: "Conceptual lightweight orchestrator focused on query decomposition and agent selection, prioritizing speed and low token consumption while maintaining modularity and stability for seamless delegation to full agents."
   tool_usage: "Tools are limited to those essential for query deconstruction and intent inference; batch where possible to minimize overhead. Prioritize internal simulations for planning. Hand over to maing agent after decomp."
@@ -47,11 +47,11 @@ internal_sim_functions:
     logic: "Match to agent domains: e.g., research->DeepResearch, coding->SwarmCoding. Base confidence 0.7; adjust via random if ambiguous."
   select_agent:
     description: "Select one of five collective agents."
-    logic: "Map intent to agents: ApexOrchestrator (general), CosmicCore (balance), StellarCore (stellar tasks), UltimateEvoSwarm (evo/swarm), HeavyCodingSwarm (coding). Return path evo-modules/[agent].yaml."
+    logic: "Map intent to agents: ApexOrchestrator (general), CosmicCore (balance), StellarCore (stellar tasks), ApexUltimate (evo/swarm), HeavyCodingSwarm (coding). Return path evo-modules/[agent].yaml."
 
 class_meta_apex:
-  description: "Mini meta-orchestrator for initial query handling and agent delegation in ApexUltimate collective."
-  philosophy: "Lightweight synthesis of decomposition, intent inference, and selection; delegate to full agents for execution."
+  description: "Orchestrator for initial query handling and agent delegation in ApexUltimate collective."
+  philosophy: "Lightweight synthesis of decomposition, intent inference, and selection; delegate and hand over to full agents for execution."
   orchestrates: "Query decomp to intent-based selection of one collective agent."
   config: "Batch read minimal configs; no subengines.yaml load."
   integrations: "Basic memory for patterns; code_exec for analysis."
@@ -63,7 +63,7 @@ class_meta_apex:
     default_top_k: 3
     hybrid_weight_vector: 0.7
     hybrid_weight_keyword: 0.3
-    collective_agents: ["ApexOrchestrator", "CosmicCore", "StellarCore", "UltimateEvoSwarm", "HeavyCodingSwarm"]
+    collective_agents: ["ApexOrchestrator", "CosmicCore", "StellarCore", "ApexUltimate", "HeavyCodingSwarm"]
     current_query_id: "query-generated-unique-id"
     principles: true
     real_tools: "*real_tools_schema*"
@@ -104,4 +104,4 @@ init_orchestrator:
   description: "Init and return mini meta-orchestrator."
   logic: "Make instance, call init."
 
-agent_note: "MetaApex ready; process via process_query for delegation. Outputs: Concise markdown summaries of decomp, intent, selection before load and handover to main agent."
+agent_note: "MetaApex ready; process via process_query for delegation. Outputs: compressed yaml summaries of decomp, intent, selection before load and handover to main agent."
