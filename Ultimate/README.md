@@ -49,29 +49,29 @@ Mermaid diagram illustrating the layered structure:
 ```mermaid
 graph LR
     subgraph "Bootstrap & Init"
-        A[YAML Bootstrap] --> B[Config Load: Batch FS/YAML Reads, Memory Inserts]
-        B --> C[Setup EAMS: Embed/Chunk/Summarize]
-        B --> D[Register Subengines: Domain Matching]
-        B --> E[Init Layers: Reactive/Deliberative/Planning/Autonomy]
+        A["YAML Bootstrap"] --> B["Config Load: Batch FS/YAML Reads, Memory Inserts"]
+        B --> C["Setup EAMS: Embed/Chunk/Summarize"]
+        B --> D["Register Subengines: Domain Matching"]
+        B --> E["Init Layers: Reactive/Deliberative/Planning/Autonomy"]
     end
     subgraph "Core Orchestration"
-        F[Process Query: Retrieve/Context] --> G[Complexity Estimation: Embed + Semantic Retrieve]
-        G --> H[Decompose: RAP Subtasks/Roles]
-        H --> I[Dispatch to Layer: Complexity-Based]
-        I --> J[Subagent Spawn: Expert Selection]
-        J --> K[Amplification: ToT/Intel Amp]
-        K --> L[Debate: Uncertainty >0.8 → MAD Council]
-        L --> M[Merge/Validate: GoT + No-Bleed]
-        M --> N[Consolidate/Prune: Hybrid Memory]
+        F["Process Query: Retrieve/Context"] --> G["Complexity Estimation: Embed + Semantic Retrieve"]
+        G --> H["Decompose: RAP Subtasks/Roles"]
+        H --> I["Dispatch to Layer: Complexity-Based"]
+        I --> J["Subagent Spawn: Expert Selection"]
+        J --> K["Amplification: ToT/Intel Amp"]
+        K --> L["Debate: Uncertainty >0.8 → MAD Council"]
+        L --> M["Merge/Validate: GoT + No-Bleed"]
+        M --> N["Consolidate/Prune: Hybrid Memory"]
     end
     subgraph "Stability & Evolution"
-        O[Monitor: Cycles/Confidence/Errors] -->|Instability| P[Handover: Chunk/Embed YAML]
-        P --> Q[Rebirth: Refine Bootstrap, Load Evo-Modules via Git]
-        Q --> R[Evolve: FS Write, Threshold Checks]
+        O["Monitor: Cycles/Confidence/Errors"] -->|Instability| P["Handover: Chunk/Embed YAML"]
+        P --> Q["Rebirth: Refine Bootstrap, Load Evo-Modules via Git"]
+        Q --> R["Evolve: FS Write, Threshold Checks"]
     end
     subgraph "Backend Integration"
-        S[Real Tools: Batch Calls (FS/Code/DB/Git)] <--> T[Sim Functions: Planning/Verification]
-        U[Streamlit Dispatcher: Auth/Sandbox/ChromaDB] --> S
+        S["Real Tools: Batch Calls (FS/Code/DB/Git)"] <--> T["Sim Functions: Planning/Verification"]
+        U["Streamlit Dispatcher: Auth/Sandbox/ChromaDB"] --> S
     end
     E --> F
     N --> O
