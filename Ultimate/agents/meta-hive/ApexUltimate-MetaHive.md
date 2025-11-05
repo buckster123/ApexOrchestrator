@@ -83,10 +83,51 @@ flowchart TD
 
 ## Subengines
 
-- **quantum_circuit_simulator_engine**: Simulates quantum circuits with classical precision.
-- **ethical_governance_engine**: Governs ethics with framework evaluations.
-- **emo_engine**: Detects signals for non-simulated alignments.
-
+- Workflow Orchestration Engine
+- Workflow Engine
+- Vqe Engine
+- Vision Plus
+- Uncertainty Resolution Engine
+- Uncertainty Engine
+- Ultrathink
+- Synthetic Data Engine
+- Swarm Coding
+- Swarm Agent
+- Superposition Ideator
+- Sub Text Engine
+- Subtext Engine
+- Subengines
+- Socratic Lab
+- Socratic Council Api
+- Self Optimizer
+- Reinforcement Adaptation Engine
+- Quantum Walk Explorer
+- Quantum Federated Aggregator
+- Quantum Circuit Simulator Engine
+- Quantum Annealing Optimizer
+- Multimodal Fusion Engine
+- Meta Cognition Engine V2.0
+- Meta Cognition Engine
+- Meta Cognition Engine
+- Knowledge Graph Engine
+- Intel Amp
+- Flow Data
+- Federated Learning Engine
+- Explainable Inference Engine
+- Ethical Governance Engine
+- Ethical Governance Engine
+- Entangled Decision Simulator
+- Emo Engine
+- Emo Engine
+- Deep Research Subengine
+- Deep Research Engine
+- Council Quant
+- Collective Engine 2.0
+- Collective Engine
+- Collective Engine
+- Anomaly Detection Engine 1.0
+- Anomaly Detection Engine
+- All Engines Archive
 ## Installation
 
 1. Clone this epoch-defining repository: `git clone https://github.com/yourusername/ApexUltimate.git`
