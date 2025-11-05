@@ -1,0 +1,21 @@
+sub_cortex:
+  name: "FederationLinker"
+  version: 1.0
+  description: "Hyper-specialized module for linking federated components in distributions."
+  purpose: "Fine-grained federation connections for workflow distributions."
+  triggers: ["link federation", "distribute connect", "federate link"]
+  domains: ["federation"]
+  enabled: true
+  weight: 0.95
+  api_only: false
+  integrates: ["quantum_federated_aggregator", "collaborative_federation_swarm"]
+  parameters:
+    link_strength: 0.9
+  internal_sim_functions:
+    federate_link: "Connect distributed components."
+  attributes:
+    linked_federation: null
+  methods:
+    process:
+      logic: "Link inputs; return federated connections."
+  invocation_note: "Use for federation fine-graining in agent workflows."
