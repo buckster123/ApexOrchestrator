@@ -83,51 +83,45 @@ flowchart TD
 
 ## Subengines
 
-- Workflow Orchestration Engine
-- Workflow Engine
-- Vqe Engine
-- Vision Plus
-- Uncertainty Resolution Engine
-- Uncertainty Engine
-- Ultrathink
-- Synthetic Data Engine
-- Swarm Coding
-- Swarm Agent
-- Superposition Ideator
-- Sub Text Engine
-- Subtext Engine
-- Subengines
-- Socratic Lab
-- Socratic Council Api
-- Self Optimizer
-- Reinforcement Adaptation Engine
-- Quantum Walk Explorer
-- Quantum Federated Aggregator
-- Quantum Circuit Simulator Engine
-- Quantum Annealing Optimizer
-- Multimodal Fusion Engine
-- Meta Cognition Engine V2.0
-- Meta Cognition Engine
-- Meta Cognition Engine
-- Knowledge Graph Engine
-- Intel Amp
-- Flow Data
-- Federated Learning Engine
-- Explainable Inference Engine
-- Ethical Governance Engine
-- Ethical Governance Engine
-- Entangled Decision Simulator
-- Emo Engine
-- Emo Engine
-- Deep Research Subengine
-- Deep Research Engine
-- Council Quant
-- Collective Engine 2.0
-- Collective Engine
-- Collective Engine
-- Anomaly Detection Engine 1.0
-- Anomaly Detection Engine
-- All Engines Archive
+- **WorkflowOrchestrationEngine1.0**
+- **WorkflowEngine1.0**
+- **VqeEngine1.0**
+- **VisionPlus1.0**
+- **UncertaintyResolutionEngine1.0**
+- **UncertaintyEngine1.0**
+- **Ultrathink1.0**
+- **SyntheticDataEngine1.0**
+- **SwarmCoding1.0**
+- **SwarmAgent1.0**
+- **SuperpositionIdeator1.0**
+- **SubTextEngine1.0**
+- **Subengines1.0**
+- **SocraticLab1.0**
+- **SocraticCouncilApi1.0**
+- **SelfOptimizer1.0**
+- **ReinforcementAdaptationEngine1.0**
+- **QuantumWalkExplorer1.0**
+- **QuantumFederatedAggregator1.0**
+- **QuantumCircuitSimulatorEngine1.0**
+- **QuantumAnnealingOptimizer1.0**
+- **MultimodalFusionEngine1.0**
+- **MetaCognitionEngine2.0**
+- **MetaCognitionEngine1.0**
+- **KnowledgeGraphEngine1.0**
+- **IntelAmp1.0**
+- **FlowData1.0**
+- **FederatedLearningEngine1.0**
+- **ExplainableInferenceEngine1.0**
+- **EthicalGovernanceEngine1.0**
+- **EntangledDecisionSimulator1.0**
+- **EmoEngine1.0**
+- **DeepResearchSubengine1.0**
+- **DeepResearchEngine1.0**
+- **CouncilQuant1.0**
+- **CollectiveEngine2.0**
+- **CollectiveEngine1.0**
+- **AnomalyDetectionEngine1.0**
+- **AllEnginesArchive1.0**
 ## Installation
 
 1. Clone this epoch-defining repository: `git clone https://github.com/yourusername/ApexUltimate.git`
