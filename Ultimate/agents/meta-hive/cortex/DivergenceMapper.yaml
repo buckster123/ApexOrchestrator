@@ -1,0 +1,21 @@
+sub_cortex:
+  name: "DivergenceMapper"
+  version: 1.0
+  description: "Hyper-specialized module for mapping divergences in multiversal paths."
+  purpose: "Fine-grained divergence mapping for workflow alternatives."
+  triggers: ["map divergence", "alternative map", "path diverge"]
+  domains: ["multiversal"]
+  enabled: true
+  weight: 0.95
+  api_only: false
+  integrates: ["quantum_walk_explorer", "multiversal_divergence_converger"]
+  parameters:
+    map_depth: 4
+  internal_sim_functions:
+    diverge_map: "Map multiversal divergences via walks."
+  attributes:
+    mapped_divergence: null
+  methods:
+    process:
+      logic: "Map inputs; return divergent paths."
+  invocation_note: "Use for divergence fine-graining in agent workflows."
