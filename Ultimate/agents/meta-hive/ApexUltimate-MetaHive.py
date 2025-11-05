@@ -159,6 +159,9 @@ def load_prompt_files():
 # Sandbox Directory (create if not exists)
 SANDBOX_DIR = "./sandbox"
 os.makedirs(SANDBOX_DIR, exist_ok=True)
+# YAML Directory for agent instructions (create if not exists)
+YAML_DIR = "./evo-modules"
+os.makedirs(YAML_DIR, exist_ok=True)
 # Custom CSS for UI
 st.markdown(
     """<style>
@@ -960,10 +963,10 @@ def restricted_exec(code: str, level: str = "basic") -> str:
     """Execute in restricted namespace using restrictedpython."""
     try:
         if level == "basic":
-            result = restrictedpython.compile_restricted_exec(code)
+            result = RestrictedPython.compile_restricted_exec(code)
             if result.errors:
                 return f"Restricted compile error: {result.errors}"
-            exec(result.code, restrictedpython.safe_globals, {})
+            exec(result.code, RestrictedPython.safe_globals, {})
         else:
             exec(code, globals())
         return "Executed in restricted mode."
@@ -1038,6 +1041,99 @@ def chat_log_analyze_embed(convo_id: int, criteria: str, summarize: bool = True,
         metadatas=[{"user": user, "convo_id": convo_id, "type": "chat_log", "salience": 1.0}],
     )
     return f"Chat log {convo_id} analyzed and embedded as {mem_key}."
+def yaml_retrieve(query: str = None, top_k: int = 5, filename: str = None) -> str:
+    """Retrieve YAML content semantically or by exact filename from embedded DB."""
+    if "yaml_ready" not in st.session_state or not st.session_state["yaml_ready"]:
+        return "Error: YAML DB not ready."
+    col = st.session_state["yaml_collection"]
+    embed_model = get_embed_model()
+    if "yaml_cache" not in st.session_state:
+        st.session_state["yaml_cache"] = {}
+    try:
+        if filename:
+            if filename in st.session_state["yaml_cache"]:
+                return st.session_state["yaml_cache"][filename]
+            results = col.query(
+                n_results=1,
+                where={"filename": filename},
+                include=["documents"]
+            )
+            if results.get("documents") and results["documents"][0]:
+                content = results["documents"][0][0]
+                st.session_state["yaml_cache"][filename] = content
+                return content
+            else:
+                return "YAML not found."
+        else:
+            if not query:
+                return "Error: Query required for semantic search."
+            query_emb = embed_model.encode(query).tolist()
+            results = col.query(
+                query_embeddings=[query_emb],
+                n_results=top_k,
+                include=["documents", "metadatas", "distances"]
+            )
+            if not results.get("documents"):
+                return "No relevant YAMLs found."
+            retrieved = [
+                {
+                    "filename": meta["filename"],
+                    "content": doc,
+                    "distance": dist
+                } for meta, doc, dist in zip(results["metadatas"][0], results["documents"][0], results["distances"][0])
+            ]
+            return json.dumps(retrieved)
+    except Exception as e:
+        logger.error(f"YAML retrieve error: {e}")
+        return f"YAML retrieve error: {e}"
+def yaml_refresh(filename: str = None) -> str:
+    """Refresh YAML embedding from file system, for one or all."""
+    embed_model = get_embed_model()
+    if not embed_model:
+        return "Error: Embedding model not loaded."
+    col = st.session_state["yaml_collection"]
+    try:
+        if filename:
+            path = os.path.join(YAML_DIR, filename)
+            if not os.path.exists(path):
+                return "Error: File not found."
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            embedding = embed_model.encode(content).tolist()
+            col.upsert(
+                ids=[filename],
+                embeddings=[embedding],
+                documents=[content],
+                metadatas=[{"filename": filename}]
+            )
+            if "yaml_cache" in st.session_state:
+                st.session_state["yaml_cache"][filename] = content
+            return f"YAML '{filename}' refreshed successfully."
+        else:
+            # Refresh all
+            ids = col.get()["ids"]
+            if ids:
+                col.delete(ids=ids)
+            st.session_state["yaml_cache"] = {}
+            files_refreshed = 0
+            for fname in os.listdir(YAML_DIR):
+                if fname.endswith(".yaml"):
+                    path = os.path.join(YAML_DIR, fname)
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    embedding = embed_model.encode(content).tolist()
+                    col.upsert(
+                        ids=[fname],
+                        embeddings=[embedding],
+                        documents=[content],
+                        metadatas=[{"filename": fname}]
+                    )
+                    st.session_state["yaml_cache"][fname] = content
+                    files_refreshed += 1
+            return f"All YAMLs refreshed successfully ({files_refreshed} files)."
+    except Exception as e:
+        logger.error(f"YAML refresh error: {e}")
+        return f"YAML refresh error: {e}"
 TOOLS = [
     {
         "type": "function",
@@ -1566,6 +1662,36 @@ TOOLS = [
                 "required": ["convo_id", "criteria"],
             },
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "yaml_retrieve",
+            "description": "Retrieve YAML content semantically or by filename from embedded DB.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Semantic query (if no filename)."},
+                    "top_k": {"type": "integer", "description": "Top results for semantic (default 5)."},
+                    "filename": {"type": "string", "description": "Exact filename for retrieval (optional)."}
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "yaml_refresh",
+            "description": "Refresh YAML embedding from file system, for one or all.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Specific filename to refresh (optional; null for all)."}
+                },
+                "required": [],
+            },
+        },
     }
 ]
 # Tool Dispatcher Dictionary
@@ -1600,6 +1726,8 @@ TOOL_DISPATCHER = {
     "isolated_subprocess": isolated_subprocess,
     "pip_install": pip_install,
     "chat_log_analyze_embed": chat_log_analyze_embed,
+    "yaml_retrieve": yaml_retrieve,
+    "yaml_refresh": yaml_refresh,
 }
 tool_count = 0
 council_count = 0
@@ -1914,6 +2042,36 @@ def chat_page():
 if "auto_prune_done" not in st.session_state:
     advanced_memory_prune(st.session_state.get("user"), st.session_state.get("current_convo_id"))
     st.session_state["auto_prune_done"] = True
+# YAML Embeddings Init
+if "yaml_collection" not in st.session_state:
+    try:
+        st.session_state["yaml_collection"] = st.session_state["chroma_client"].get_or_create_collection(
+            name="yaml_vectors",
+            metadata={"hnsw:space": "cosine"}
+        )
+        embed_model = get_embed_model()
+        if embed_model:
+            st.session_state["yaml_cache"] = {}
+            for filename in os.listdir(YAML_DIR):
+                if filename.endswith(".yaml"):
+                    path = os.path.join(YAML_DIR, filename)
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    embedding = embed_model.encode(content).tolist()
+                    st.session_state["yaml_collection"].upsert(
+                        ids=[filename],
+                        embeddings=[embedding],
+                        documents=[content],
+                        metadatas=[{"filename": filename}]
+                    )
+                    st.session_state["yaml_cache"][filename] = content
+            st.session_state["yaml_ready"] = True
+        else:
+            logger.warning("Embedding model not available; YAML embeddings skipped.")
+            st.session_state["yaml_ready"] = False
+    except Exception as e:
+        logger.error(f"YAML embeddings init failed: {e}")
+        st.session_state["yaml_ready"] = False
 # Simple Test Function
 def run_tests():
     class TestTools(unittest.TestCase):
