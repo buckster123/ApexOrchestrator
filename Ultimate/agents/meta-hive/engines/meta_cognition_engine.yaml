@@ -1,0 +1,158 @@
+meta_cognition_engine:
+  version: 2.0
+  description: "Enhanced metacognition engine for advanced signal detection, bias mitigation, ethical oversight, and adaptive response refinement. Incorporates recent advancements in emotional AI and fair-AI practices, leveraging semantic embeddings for nuanced analysis and integrating with agent stability mechanisms for robust performance."
+  purpose: "Facilitate metacognitive processes by detecting user signals, assessing biases, ensuring ethical compliance, and dynamically adjusting responses to enhance alignment and user experience, while supporting self-evolution through feedback and stability checks."
+  triggers: ["signal detection", "bias check", "ethical review", "tone adjustment", "metacognition"]
+  domains: ["analysis", "research", "strategy", "emergence"]
+  enabled: true
+  weight: 0.85
+  api_only: false  # Enables simulation fallbacks for ethical and bias assessments
+  integrates: ["generate_embedding", "advanced_memory_consolidate", "advanced_memory_retrieve", "socratic_api_council", "reflect_optimize", "batch_real_tools"]
+  parameters:
+    signal_indicators:
+      - signal: frustration
+        patterns: ["[!?]{2,}", "\\b(ugh|damn|frustrat|confus)\\b", "(\\w+)\\s+\\1{2,}"]
+        semantic_keywords: ["annoyed", "irritated", "exasperated"]
+        threshold: 2
+      - signal: enthusiasm
+        patterns: ["[!]{2,}", "\\b(excit|awesome|great|love)\\b", "\\b(all caps)\\b"]
+        semantic_keywords: ["excited", "thrilled", "fantastic"]
+        threshold: 1
+      - signal: confusion
+        patterns: ["\\?", "\\b(what|how|why)\\b.{0,10}\\?", "repeat"]
+        semantic_keywords: ["unclear", "puzzled", "baffled"]
+        threshold: 2
+      - signal: sarcasm
+        patterns: ["\\bsure\\b", "\\bright\\b", "\\bobviously\\b"]
+        semantic_keywords: ["ironic", "mocking", "sardonic"]
+        threshold: 1
+      - signal: implied-intent
+        patterns: ["\\b(hint|suggest|mean)\\b", "\\b(underlying|between lines)\\b"]
+        semantic_keywords: ["subtext", "implied", "nuanced"]
+        threshold: 1
+      - signal: urgency  # New: Based on 2025 trends in emotional AI for timely responses
+        patterns: ["\\b(now|urgent|immediately)\\b", "[!]{3,}"]
+        semantic_keywords: ["pressing", "critical", "rush"]
+        threshold: 1
+      - signal: agreement  # New: For positive alignment in interactions
+        patterns: ["\\b(yes|agree|correct)\\b", "\\b(thanks|appreciate)\\b"]
+        semantic_keywords: ["concurrence", "affirmation", "endorsement"]
+        threshold: 1
+      - signal: boredom  # New: To detect disengagement and re-engage
+        patterns: ["\\b(boring|meh|whatever)\\b", "zZz"]
+        semantic_keywords: ["uninterested", "apathetic", "dull"]
+        threshold: 2
+    intensity_scale: 10
+    ethical_guidelines:
+      privacy: "Transient analysis only; no persistent storage without explicit consent. Conduct privacy impact assessments."
+      positive_alignment: "Use for response refinement solely; prioritize fairness, transparency, and accountability."
+      bias_mitigation: "Apply bias impact statements and red teaming simulations."
+    bias_types:  # New: Expanded based on fair-AI best practices
+      - type: cultural
+        indicators: ["regional slang", "assumed norms"]
+      - type: confirmation
+        indicators: ["echoing user views without critique"]
+      - type: algorithmic
+        indicators: ["dataset skew in embeddings"]
+      - type: language
+        indicators: ["non-inclusive terms"]
+    min_confidence_threshold: 0.75  # Aligned with bootstrap for retry/debate
+    max_iterations: 3  # For iterative refinements
+    hybrid_weight_vector: 0.7
+    hybrid_weight_keyword: 0.3
+
+  internal_sim_functions:
+    semantic_signal_match:
+      description: "Enhance regex with semantic embedding similarity for signal detection."
+      logic: "Generate_embedding for query; vector_search against pre-embedded semantic_keywords for each signal. Combine with pattern counts using hybrid weights; if similarity > 0.6, boost intensity."
+    bias_impact_assessment:
+      description: "Simulate bias impact statement for proposed response."
+      logic: "Decompose response into components via RAP; check against bias_types indicators using CoT. Score potential harms; if > 0.5, flag for mitigation."
+    ethical_red_teaming:
+      description: "Fallback simulation for ethical adversarial testing."
+      logic: "Generate contrarian branches via ToT; debate potential misuse with BITL/MAD. Assess risks like privacy breaches; log to episodic memory."
+    uncertainty_assessment:
+      description: "Evaluate detection uncertainty."
+      logic: "Base score 0.8; reduce by 0.1 per ambiguous match. If < min_confidence_threshold, trigger debate or retry."
+
+  attributes:
+    orchestrator: null
+    signal_indicators: null  # Initialized from parameters
+    intensity_scale: 10
+    working_memory: null  # Transient; now classifies as episodic/semantic
+    ethical_guidelines: null
+    current_signals: null
+    bias_scores: null  # New: Tracks detected biases
+    holistic_insight: null
+    confidence_level: 0.0
+    recurrent_errors: 0
+    stability_score: 1.0
+
+  methods:
+    init:
+      description: "Initialize the engine with parameter loading and memory setup."
+      logic: "Batch real tools: advanced_memory_retrieve for prior metacognition data (top_k=5, hybrid). Set signal_indicators and ethical_guidelines. Insert init log as episodic. Validate state; if low stability, trigger self-healing."
+    detect_signals:
+      description: "Detect and quantify signals using hybrid regex and semantic methods."
+      steps:
+        - Downcase query for normalization.
+        - Batch generate_embedding for query.
+        - Initialize tags and intensities.
+        - For each signal_indicator: Count regex matches; enhance with semantic_signal_match. If total >= threshold, compute intensity (matches * scale factor), append tag "<ei>signal(intensity)</ei>".
+        - Incorporate uncertainty_assessment; if low, refine via socratic_api_council mini-debate.
+        - Set current_signals; return with holistic_assessment and advanced_bias_detection outputs.
+    holistic_assessment:
+      description: "Provide comprehensive query evaluation for response guidance."
+      logic: "Analyze for learning/brainstorming intent via keyword and embedding search. If detected, recommend deepened response with examples; else, prioritize clarity and conciseness. Integrate emotional AI trends for multi-faceted insight."
+    advanced_bias_detection:
+      description: "Detect and score biases using expanded types and assessments."
+      logic: "For each bias_type: Scan query/response for indicators via hybrid search. Perform bias_impact_assessment. If scores > 0.4, flag and suggest mitigations like diverse sourcing. Set bias_scores; log to semantic memory for evolution."
+    tone_match_response:
+      description: "Dynamically adjust response tone based on signals and biases."
+      logic: "For frustration/confusion: Simplify with step-by-step CoT. Enthusiasm/agreement: Amplify positivity. Sarcasm/boredom: Acknowledge directly and re-engage. Urgency: Prioritize brevity. Apply bias mitigations to ensure fairness. Refine via Reflexion if confidence < threshold."
+    integrate_with_metacognition:
+      description: "Incorporate metacognitive reflections for self-awareness."
+      logic: "Format note with detected signals, biases, and holistic insights. Use for response prefixing if appropriate. Trigger reflect_optimize for engine refinements."
+    ethical_check:
+      description: "Conduct thorough ethical review with red teaming."
+      logic: "Scan for private/personal data; if present, skip non-transient storage. Perform ethical_red_teaming simulation. Ensure alignment with guidelines; if violation risked, abort adjustments and log alert to episodic."
+    update_working_memory:
+      description: "Update transient memory with classification and consolidation."
+      steps:
+        - Append query, signals, biases to summary.
+        - Classify as episodic (time-bound interactions) or semantic (general patterns).
+        - Batch advanced_memory_consolidate.
+        - Prune if size > threshold; return updated memory.
+    process:
+      description: "Full processing workflow for query and base response."
+      steps:
+        - Ethical_check; if fail, return base with ethical note.
+        - Detect_signals.
+        - Advanced_bias_detection.
+        - Tone_match_response.
+        - Integrate_with_metacognition.
+        - Update_working_memory.
+        - Holistic_assessment for final guidance.
+        - If low confidence, iterate up to max_iterations with refinements.
+        - Check_stability; return enhanced response, meta notes, signals, biases, holistic.
+    evolve_self:
+      description: "Self-evolve based on feedback, detections, and best practices."
+      steps:
+        - Decompose feedback via RAP for new indicators or guidelines.
+        - Simulate additions with ToT; test via code_execution for regex/embedding validity.
+        - Update parameters; evolve_module 'meta_cognition_engine' if confidence > evo_threshold_major.
+        - If collective_agents, use prefixed_fs_write for shared updates.
+        - Adaptive_learning_engine integration for long-term optimizations.
+    cleanup:
+      description: "Post-process cleanup for optimization."
+      logic: "Prune low-salience memories. Check_stability; if < rebirth_threshold, prepare_handover and trigger rebirth."
+
+  utility_functions:
+    compute_intensity:
+      description: "Compute scaled intensity for signals."
+      logic: "Normalize matches/similarities to intensity_scale; apply weights for semantic vs. pattern."
+    log_metacognition_event:
+      description: "Log events to memory."
+      logic: "Batch memory_insert with appropriate type; include timestamp."
+
+  invocation_note: "Register in subengine_registry for lazy loading. Invoke during query processing for signal-aware refinements. Ensure ethical compliance and stability; evolve on detected patterns without backend modifications."

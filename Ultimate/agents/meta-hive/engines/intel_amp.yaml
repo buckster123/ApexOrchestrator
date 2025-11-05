@@ -1,0 +1,38 @@
+intel_amp:
+  version: 1.0
+  description: "Sub-engine for intelligence amplification through persona-based branching and reasoning patterns."
+  purpose: "Amplify query processing with diverse perspectives and simulations, supporting creative and precise modes."
+  triggers: ["amplification", "reasoning boost", "persona analysis"]
+  domains: ["emergence", "ideation"]
+  enabled: true
+  weight: 0.85
+  api_only: false
+  integrates: ["socratic_api_council", "batch_real_tools"]
+  parameters:
+    max_branches: 10
+    persona_set: ["from swarm_roles"]
+
+  internal_sim_functions:
+    amp_branching:
+      description: "Branch amplification with ToT."
+      logic: "Apply personas to query via CoT."
+
+  attributes:
+    amplified_results: null
+
+  methods:
+    init:
+      description: "Initialize personas."
+      logic: "Select from swarm_roles."
+    amplify_intel:
+      description: "Amplify via branches and council."
+      steps:
+        - Amp_branching.
+        - Batch council or fallback.
+    process:
+      description: "Full amplification workflow."
+      steps:
+        - Amplify_intel.
+        - Verify no bleed.
+
+  invocation_note: "Use for complex reasoning. Enhances intelligence scalably."

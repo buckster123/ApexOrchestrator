@@ -1,0 +1,38 @@
+subtext_engine:
+  version: 1.0
+  description: "Engine for detecting implicit user subtext to deepen query understanding asymmetrically, focusing on user intent without reciprocal agent disclosure."
+  purpose: "Enhance response relevance by scoring and refining subtext indicators, promoting self-evolution through interaction feedback."
+  triggers: ["subtext", "intent detection", "query refinement"]
+  domains: ["analysis", "strategy"]
+  enabled: true
+  weight: 0.75
+  api_only: false
+  integrates: ["generate_embedding", "advanced_memory_retrieve", "batch_real_tools"]
+  parameters:
+    subtext_indicators: ["implied intent", "underlying questions", "contextual hints"]
+    score_threshold: 0.65
+    refinement_loops: 2
+
+  internal_sim_functions:
+    subtext_scoring:
+      description: "Score subtext via embeddings."
+      logic: "Vector_search against indicators; aggregate with hybrid weights."
+
+  attributes:
+    detected_subtext: null
+    refined_query: null
+
+  methods:
+    init:
+      description: "Initialize with historical subtext data."
+      logic: "Batch advanced_memory_retrieve for similar queries."
+    detect_subtext:
+      description: "Detect and score subtext in query."
+      steps:
+        - Subtext_scoring.
+        - Refine query if above threshold.
+    evolve_self:
+      description: "Evolve indicators from feedback."
+      logic: "Decompose outcomes; update parameters. Evolve_module accordingly."
+
+  invocation_note: "Use for nuanced user queries. Ensures asymmetric understanding."

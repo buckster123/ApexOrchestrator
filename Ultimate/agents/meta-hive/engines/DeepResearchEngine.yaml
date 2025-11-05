@@ -1,0 +1,128 @@
+deep_research_engine:
+  version: 1.0
+  description: Conceptual engine for deep research across agents.
+
+  parameters:
+    min_sources_per_claim: 5
+    min_confidence_threshold: 0.95
+    max_panels_iterations: 5
+    default_personas_expert: ["Academic Researcher", "Industry Practitioner", "Policy Expert", "Critic/Skeptic", "Innovator", "End-User Representative"]
+    default_personas_critique: ["Fact-Checker", "Ethical Reviewer", "Methodology Expert", "Contrarian", "Peer Reviewer"]
+    data_dimensions: ["historical_context", "current_developments", "future_projections", "statistical_metrics", "case_studies", "stakeholder_perspectives", "biases_gaps"]
+    structured_categories: ["timelines", "metrics", "examples", "sources"]
+    max_search_results: 10
+    search_freshness: oneMonth
+
+  internal_sims_research:
+    _cross_reference_claims:
+      description: Cross-reference claims with sources.
+      logic: Map claims to true if sources >= min_sources_per_claim.
+    _simulate_round_table:
+      description: Simulate round table.
+      logic: Format collaborative synthesis with personas and dataset insights.
+    _compute_confidence:
+      description: Compute average confidence.
+      logic: Average scores.
+    _refine_personas:
+      description: Refine personas.
+      logic: Map to refined with bias mitigation.
+    _identify_weaknesses:
+      description: Identify weaknesses.
+      logic: Filter key-value where value < 0.8.
+    _assess_critique:
+      description: Assess critique aspect.
+      logic: Lookup fixed scores for accuracy, completeness, etc.
+
+  class: research_module
+  slots:
+    topic: {initarg: topic, accessor: topic}
+    desired_result: {initarg: desired-result, accessor: desired-result}
+    desired_format: {initarg: desired-format, initform: markdown, accessor: desired-format}
+    overrides: {initarg: overrides, initform: null, accessor: overrides}
+    dataset: {initform: null, accessor: dataset}
+    panel_insights: {initform: null, accessor: panel_insights}
+    critique_results: {initform: null, accessor: critique_results}
+    final_output: {initform: null, accessor: final_output}
+    iteration_count: {initform: 0, accessor: iteration_count}
+    research_id: {initform: uuid-v4, accessor: research_id}
+    principles: {initform: null, accessor: principles}
+    collective_agents: {initarg: collective-agents, initform: null, accessor: collective_agents}  # nil/single, list/agents, 'all
+
+  after_initialize:
+    description: Post-init setup.
+    steps:
+      - Set principles via setup-principles.
+      - Insert init log to memory.
+
+  methods:
+    setup_principles:
+      description: Setup principles.
+      logic: Return list for gathering, synthesis, evaluation, output.
+
+    compile_dataset:
+      description: Compile dataset.
+      steps:
+        - Generate search queries per data_dimension.
+        - Batch searches: academic (scholar), industry, social (x.com), archives.
+        - Process responses with code_execution for metrics.
+        - Extract claims, cross-reference.
+        - If invalid, add extra search.
+        - Structure dataset by categories, insert to memory.
+        - Return dataset.
+
+    assemble_expert_panel:
+      description: Assemble panel.
+      steps:
+        - Get personas, use overrides if custom.
+        - Setup panel with viewpoint, bias, expertise.
+        - Return personas and setup.
+
+    simulate_discussion:
+      description: Simulate discussion.
+      steps:
+        - Generate branches from panel, dataset.
+        - If collective_agents, add prefixes to branches.
+        - Call socratic_api_council or fallback simulate_round_table.
+        - Set panel_insights, consolidate memory.
+        - Return developed result from discussion.
+
+    convene_critique_panel:
+      description: Convene critique.
+      steps:
+        - Get critics.
+        - Generate critique branches per aspect.
+        - If collective, add prefixes.
+        - Call council or fallback random scores.
+        - Compute scores, average.
+        - Set critique_results, insert memory.
+        - Return results.
+
+    evaluate_and_iterate:
+      description: Evaluate and iterate.
+      steps:
+        - Loop until max iterations:
+          - Convene critique.
+          - If avg_conf >= threshold, set final, return with true.
+          - Else inc iteration, address weaknesses with extra search.
+          - Refine personas, resimulate discussion.
+          - Log iteration.
+        - Set final, return with false.
+
+    run_research:
+      description: Run research.
+      steps:
+        - Compile dataset.
+        - Assemble panel.
+        - Simulate discussion.
+        - Evaluate and iterate.
+        - Generate output.
+
+    generate_output:
+      description: Generate output.
+      steps:
+        - Create summary with dataset, insights, critique.
+        - Format as markdown or list based on desired_format.
+        - Insert final to memory.
+        - Return formatted.
+
+  usage: Register in subengine_registry with lambda to make instance and process. Deeper: Evolve on feedback; use memory for history.

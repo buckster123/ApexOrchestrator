@@ -1,0 +1,116 @@
+collective_engine:
+  version: 2.0
+  description: "Enhanced sandbox sharing module for secure, efficient multi-agent collaboration across sessions. Incorporates advancements in distributed AI systems (circa 2025), including dynamic access controls, consensus-driven sharing, and integration with agent stability mechanisms to prevent bleed, ensure scalability, and support self-evolution in shared environments."
+  purpose: "Facilitate seamless resource sharing among agents while maintaining isolation, stability, and adaptability. Enable cross-session persistence of shared artifacts, with robust safeguards against conflicts and unauthorized access, aligned with the ApexUltimate framework's modularity and rebirth principles."
+  triggers: ["collaboration", "sharing", "multi-agent", "sandbox init", "file access"]
+  domains: ["orchestration", "stability", "emergence", "data"]
+  enabled: true
+  weight: 0.9
+  api_only: false  # Supports simulation for access simulations and consensus fallbacks
+  integrates: ["fs_mkdir", "fs_write_file", "fs_read_file", "fs_list_files", "advanced_memory_consolidate", "advanced_memory_retrieve", "socratic_api_council", "git_ops", "batch_real_tools", "reflect_optimize"]
+  parameters:
+    shared_folders: ["configs", "data/raw", "data/processed", "data/databases", "scripts/analysis", "scripts/utils", "scripts/workflows", "outputs/reports", "outputs/visuals", "outputs/exports", "outputs/archives", "logs/tool_logs", "logs/agent_logs", "logs/timestamps", "temp/cache", "temp/scratch", "memory_overflow", "handovers", "evo-modules"]
+    unique_folder_prefix: "projects/"  # Append agent-prefix, e.g., projects/apex/
+    prefix_requirement: true  # Enforce agent-prefix_ for all shared files
+    subfolder_option: true  # Auto-create agent-prefix/ subdirs in high-volume shared folders
+    no_touch_others: true  # Strict enforcement; violations trigger rebirth checks
+    sharing_allowed: true  # For agnostic modules/logs; use shared_ prefix for collective assets
+    bleed_prevention: true  # Validate paths; log and quarantine cross-access attempts
+    agent_prefixes: ["apex", "cosmic", "stellar", "ultimate", "heavy"]  # Expandable list of known agents
+    consensus_threshold: 0.75  # For shared modifications requiring multi-agent approval
+    max_access_retries: 3  # Aligned with fs_retry_max
+    min_stability_threshold: 0.5  # For triggering healing/rebirth on bleed detections
+    git_versioning_enabled: true  # For shared evo-modules to track changes
+
+  internal_sim_functions:
+    simulate_access_conflict:
+      description: "Simulate potential bleed or conflict in shared access."
+      logic: "Generate branches via ToT for access scenarios; assess risks with CoT. If conflict probability > 0.6, recommend quarantine or consensus."
+    consensus_fallback:
+      description: "Fallback simulation for multi-agent consensus without API."
+      logic: "Format MAD-style debate with agent personas; iterate rounds to reach synthetic agreement. Log to episodic memory."
+    path_sanitization:
+      description: "Sanitize and normalize paths for security."
+      logic: "Strip invalid characters; enforce relative paths within sandbox. Return cleaned path or error if malicious."
+
+  attributes:
+    agent_prefix: null  # Set during init from orchestrator attributes
+    shared_state: null  # Tracks active shared sessions
+    access_logs: null  # Transient log of accesses
+    collective_agents: null  # List of active collaborating agents
+    stability_score: 1.0
+    recurrent_bleeds: 0
+
+  methods:
+    init_collective_sandbox:
+      description: "Initialize or extend sandbox for collective use with enhanced validation."
+      steps:
+        - Retrieve agent_prefix from attributes or semantic memory.
+        - Batch real tools: fs_list_files on root; get_current_time for timestamp.
+        - Call init_sandbox with force if not initialized.
+        - Batch fs_mkdir for unique_folder_prefix + agent_prefix and subdirs in shared_folders where subfolder_option=true.
+        - If git_versioning_enabled, git_ops init on evo-modules for shared tracking.
+        - Validate_collective_state; if fails, trigger self-healing.
+        - Log init metrics to semantic memory; set shared_state to active.
+    prefixed_fs_write:
+      description: "Secure wrapped write with prefixing, consensus, and bleed prevention."
+      steps:
+        - Path_sanitization on input path.
+        - Determine effective_path: Append agent_prefix if prefix_requirement; use subfolder if high-volume.
+        - If shared modification and collective_agents, seek_consensus via socratic_api_council or fallback.
+        - Bleed_check; if detected, increment recurrent_bleeds, log alert to episodic, and abort if > 5.
+        - Batch fs_write_file with effective_path.
+        - If git_versioning_enabled and in evo-modules, git_ops commit with message.
+        - Log access to access_logs and advanced_memory_consolidate as episodic.
+    prefixed_fs_read:
+      description: "Secure wrapped read with prefixing and access controls."
+      steps:
+        - Path_sanitization on input path.
+        - Determine effective_path: Add agent_prefix or subfolder as per rules.
+        - If not prefixed and no_touch_others, deny access and log denial.
+        - Bleed_check (read mode); if flagged, quarantine_path and trigger debate for resolution.
+        - Retry_fs_read with effective_path up to max_access_retries.
+        - Log read to access_logs and memory.
+    bleed_check:
+      description: "Enhanced check for cross-prefix or unauthorized access."
+      logic: "Extract prefixes from agent_prefixes excluding self. Scan path for matches; if found, simulate_access_conflict. Return true on bleed; update stability_score -= 0.1."
+    shared_evo_load:
+      description: "Load shared or specific evo-modules with versioning."
+      steps:
+        - Determine path: Agent-specific via subfolder or shared_ prefix.
+        - Batch fs_read_file; parse YAML.
+        - If git_versioning_enabled, git_ops diff for changes; if conflicts, resolve via consensus.
+        - Load_evo_module; log to semantic memory.
+    validate_collective_state:
+      description: "Comprehensive validation of sandbox integrity."
+      steps:
+        - Batch fs_list_files recursive on shared_folders.
+        - For each file: Bleed_check; if issues, quarantine and log potential_bleed to episodic.
+        - Check_stability; if < min_stability_threshold, prepare_handover and trigger rebirth.
+        - Return validation status; evolve_self if recurrent issues.
+    seek_consensus:
+      description: "Obtain multi-agent consensus for shared actions."
+      logic: "Generate branches for action proposal. Batch socratic_api_council with collective_agents personas and rounds. If agreement >= consensus_threshold, proceed; else, fallback to unique folder and log dispute."
+    quarantine_path:
+      description: "Quarantine conflicting paths for review."
+      logic: "Batch fs_mkdir quarantine/; fs_mv conflicting path to quarantine/agent_prefix_file. Log to episodic; notify admin via metrics."
+    evolve_self:
+      description: "Self-evolve based on access patterns and bleeds."
+      steps:
+        - Retrieve access_logs top_k from episodic.
+        - Decompose patterns via RAP; propose new rules (e.g., dynamic prefixes).
+        - Simulate changes with ToT; if confidence > evo_threshold_major, evolve_module 'collective_engine'.
+        - If collective, use prefixed_fs_write for shared update; git_ops commit.
+    cleanup:
+      description: "Post-session cleanup for shared resources."
+      logic: "Prune access_logs low-salience. Validate_collective_state. If shared_state active, prepare_handover for cross-session persistence."
+
+  utility_functions:
+    get_agent_prefix:
+      description: "Retrieve or generate agent prefix."
+      logic: "From attributes; fallback to uuid if null."
+    log_collective_event:
+      description: "Log events with collective context."
+      logic: "Batch memory_insert with type episodic, including agent_prefix and shared_folders involved."
+
+  invocation_note: "Load into all agents' evo-modules for cross-session sharing. Register in subengine_registry for dynamic activation. Enforce prefixed accesses; integrate with rebirth for conflict resolution. Evolve on detected patterns to enhance multi-agent efficiency."
