@@ -960,7 +960,7 @@ def venv_create(env_name: str, with_pip: bool = True) -> str:
         logger.error(f"Venv error: {e}")
         return f"Venv error: {e}"
 def restricted_exec(code: str, level: str = "basic") -> str:
-    """Execute in restricted namespace using restrictedpython."""
+    """Execute in restricted namespace using restrictedpython.""" # noqa: C901
     try:
         if level == "basic":
             result = RestrictedPython.compile_restricted_exec(code)
@@ -1041,7 +1041,7 @@ def chat_log_analyze_embed(convo_id: int, criteria: str, summarize: bool = True,
         metadatas=[{"user": user, "convo_id": convo_id, "type": "chat_log", "salience": 1.0}],
     )
     return f"Chat log {convo_id} analyzed and embedded as {mem_key}."
-def yaml_retrieve(query: str = None, top_k: int = 5, filename: str = None) -> str:
+def yaml_retrieve(query: str = None, top_k: int = 5, filename: str = None) -> str: # noqa: C901
     """Retrieve YAML content semantically or by exact filename from embedded DB."""
     if "yaml_ready" not in st.session_state or not st.session_state["yaml_ready"]:
         return "Error: YAML DB not ready."
@@ -1086,7 +1086,7 @@ def yaml_retrieve(query: str = None, top_k: int = 5, filename: str = None) -> st
     except Exception as e:
         logger.error(f"YAML retrieve error: {e}")
         return f"YAML retrieve error: {e}"
-def yaml_refresh(filename: str = None) -> str:
+def yaml_refresh(filename: str = None) -> str: # noqa: C901
     """Refresh YAML embedding from file system, for one or all."""
     embed_model = get_embed_model()
     if not embed_model:
@@ -1732,7 +1732,7 @@ TOOL_DISPATCHER = {
 tool_count = 0
 council_count = 0
 main_count = 0
-def process_tool_calls(tool_calls, current_messages, enable_tools):
+def process_tool_calls(tool_calls, current_messages, enable_tools): # noqa: C901
     yield "\n*Thinking... Using tools...*\n"
     tool_outputs = []
     conn.execute("BEGIN")
@@ -1782,7 +1782,7 @@ def call_xai_api(
     stream=True,
     image_files=None,
     enable_tools=False,
-):
+): # noqa: C901
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/", timeout=300)
     api_messages = [{"role": "system", "content": sys_prompt}]
     # Add history
@@ -1916,10 +1916,10 @@ def export_convo(format: str = "json"):
             md += f"**{msg['role'].capitalize()}:** {msg['content']}\n\n"
         return md
     return "Unsupported format."
-def render_sidebar():
+def render_sidebar(): # noqa: C901
     with st.sidebar:
         st.header("Chat Settings")
-        model = st.selectbox(
+        st.selectbox(
             "Select Model",
             ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"],
             key="model_select",
@@ -1936,17 +1936,17 @@ def render_sidebar():
             )
             with open(os.path.join(PROMPTS_DIR, selected_file), "r") as f:
                 prompt_content = f.read()
-            custom_prompt = st.text_area(
+            st.text_area(
                 "Edit System Prompt", value=prompt_content, height=200, key="custom_prompt"
             )
-            enable_tools = st.checkbox("Enable Tools (Sandboxed)", value=False, key="enable_tools")
+            st.checkbox("Enable Tools (Sandboxed)", value=False, key="enable_tools")
         else:
             st.warning("No prompt files found in ./prompts/")
-            custom_prompt = st.text_area(
+            st.text_area(
                 "System Prompt", value="You are a helpful AI.", height=200, key="custom_prompt"
             )
         # The key for the file uploader is important
-        uploaded_images = st.file_uploader(
+        st.file_uploader(
             "Upload Images",
             type=["jpg", "png"],
             accept_multiple_files=True,
