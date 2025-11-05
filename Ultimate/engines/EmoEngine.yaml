@@ -1,0 +1,64 @@
+emo_engine:
+  version: 1.0
+  description: Conceptual module for emotion signal detection and response adjustment across agents.
+
+  signal_catalog:
+    - emotion: frustration
+      patterns: ["[!?]{2,}", "\\b(ugh|damn|frustrat|confus)\\b", "(\\w+)\\s+\\1{2,}"]
+      threshold: 2
+    - emotion: enthusiasm
+      patterns: ["[!]{2,}", "\\b(excit|awesome|great|love)\\b", "\\b(all caps)\\b"]
+      threshold: 1
+    - emotion: confusion
+      patterns: ["\\?", "\\b(what|how|why)\\b.{0,10}\\?", "repeat"]
+      threshold: 2
+
+  ethical_guidelines:
+    privacy: Transient analysis only; no storage without consent.
+    positive_alignment: Use only for response refinement (e.g., clarify on frustration).
+
+  class: emo_engine
+  slots:
+    signal_catalog: {initform: *signal_catalog*, accessor: signal_catalog}
+    working_memory: {initform: null, accessor: working_memory}  # Transient session-based.
+    ethical_guidelines: {initform: *ethical_guidelines*, accessor: ethical_guidelines}
+
+  methods:
+    analyze_query:
+      description: Analyze query for emotion signals.
+      steps:
+        - Initialize tags as empty.
+        - For each config in signal_catalog:
+          - Get state, patterns, threshold.
+          - Count matches using regex scan on downcased query.
+          - If matches >= threshold, compute intensity as min(matches / len(patterns), 1.0), push formatted tag "<ei>state(intensity)</ei>".
+        - Get holistic from holistic-assessment.
+        - Return :tags and :holistic.
+
+    holistic_assessment:
+      description: Holistic context assessment.
+      logic: If "learning" or "brainstorm" in downcased query, return learning/ideation context note; else neutral clarity focus.
+
+    tone_match_response:
+      description: Adjust response tone based on tags.
+      logic: If frustration in tags, clarify with step-by-step; if enthusiasm, build energy; else return base-response.
+
+    integrate_with_metacognition:
+      description: Add metacognition note.
+      logic: Format note on inferred tags from signals, potential bias in patterns, refine via feedback.
+
+    ethical_check:
+      description: Check ethical.
+      logic: Not if "private" or "personal" in downcased query.
+
+    process:
+      description: Process query and base-response.
+      steps:
+        - If not ethical_check, return base-response with ethical skip note.
+        - Else analyze_query.
+        - Tone-match response.
+        - Get meta from integrate-with-metacognition.
+        - Set working_memory with truncated query key to tags.
+        - Return :response, :meta, :holistic.
+
+  usage: Register in subengine_registry with lambda to make instance and process. Deeper: Evolve on feedback; use working-memory for history-aware detection.

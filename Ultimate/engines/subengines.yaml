@@ -1,0 +1,201 @@
+subengines:
+  lazy_load: false  # load during  init
+  engines:
+    - name: CollectiveEngine
+      path: evo-modules/CollectiveEngine.yaml
+      lazy_load: false
+      info: |
+        CollectiveEngine 1.0 - Sandbox Sharing Framework - Conceptual Pseudo-YAML Module - For All Agents.
+        Defines rules and dynamics for shared sandbox among 5 agents: ApexOrchestrator, CosmicCore, StellarCore, UltimateEvoSwarm, HeavyCodingSwarm. Includes prefix reqs, subfolder opts, bleed prevention via path validation, no-touch-others policy, sharing for agnostic modules w/ shared_ prefix, init collective sandbox w/ unique dirs, prefixed fs ops, shared evo load.
+    - name: collective_engine
+      path: evo-modules/collective_engine.yaml
+      lazy_load: true
+      info: |
+        collective_engine 2.0 - For All Agents.
+        Enhanced sandbox sharing module for secure, efficient multi-agent collaboration across sessions. Incorporates dynamic access controls, consensus-driven sharing, integration w/ agent stability mechanisms to prevent bleed, ensure scalability, support self-evolution in shared envs. Features shared folders list, unique folder prefix, prefix req enforcement, subfolder opts for high-vol, no-touch-others strict, sharing allowed w/ shared_ prefix, bleed prevention validation, agent prefixes list, consensus threshold, git versioning for evo-modules.
+    - name: EmoEngine
+      path: evo-modules/EmoEngine.yaml
+      lazy_load: true
+      info: |
+        EmoEngine 1.0 - For All Agents.
+        Engine for data-driven emotion signal tracking; non-anthropomorphically enhances response alignment. Focus: Detect signals for refinement; self-evolution via metacognition; non-anthropomorphic. Includes signal types like frustration/enthusiasm/confusion, detection thresholds, refinement strategies such as simplify/amplify/clarify, internal sim for signal detection via pattern/embedding match.
+    - name: SubTextEngine
+      path: evo-modules/SubTextEngine.yaml
+      lazy_load: true
+      info: |
+        SubtextEngine 1.0 - For All Agents.
+        Engine for detecting user subtext; deepens understanding asymmetrically (user-only). Focus: Score indicators; refine queries; self-evolution via feedback. Features subtext indicators like implied intent/underlying questions/contextual hints, score thresholds, refinement loops, internal sim for subtext scoring via embeddings/hybrid weights.
+    - name: MetaCognitionEngine
+      path: evo-modules/MetaCognitionEngine.yaml
+      lazy_load: true
+      info: |
+        MetaCognitionEngine 1.0 - For All Agents.
+        Data-driven signal/subtext detection for alignment/refinement. Focus: Detect emotions/subtext; tone-match; metacognition/evolution; ethical checks; deeper layers: bias detection, feedback-driven refinement, conversation history analysis. Includes signal indicators w/ patterns/thresholds, intensity scale, ethical guidelines for privacy/positive alignment.
+    - name: meta_cognition_engine
+      path: evo-modules/meta_cognition_engine.yaml
+      lazy_load: true
+      info: |
+        meta_cognition_engine 2.0 - For All Agents.
+        Enhanced metacognition engine for advanced signal detection, bias mitigation, ethical oversight, and adaptive response refinement. Incorporates recent advancements in emotional AI and fair-AI practices, leveraging semantic embeddings for nuanced analysis and integrating with agent stability mechanisms for robust performance. Features expanded signal indicators w/ patterns/semantic keywords/thresholds, intensity scale, ethical guidelines incl privacy/bias mitigation/positive alignment, bias types like cultural/confirmation/algorithmic/language.
+    - name: DeepResearchEngine
+      path: evo-modules/DeepResearchEngine.yaml
+      lazy_load: true
+      info: |
+        DeepResearchEngine 1.0 - For All Agents.
+        Engine for deep research tasks; compatible with all agents. Deconstructs prompt into data gathering + multi-persona synthesis + critique iteration. Philosophy: Diverse sources; panel debates; confidence gating; output structuring. Integration: Load with fs_read_file via load-evo-module; call run-research self topic desired-result; batch via host. Collective Toggle: collective_agents null (single), list (specific agents), all (full collab); use prefixed-fs-write/read for shared sandbox; agent-prefix in branches for panels. Tools: Subset from real_tools_schema: langsearch_web_search, api_simulate, code_execution, memory_insert, advanced_memory_consolidate, socratic_api_council, generate_embedding, summarize_chunk. Sims: Cross-ref, round-table fallback, confidence, refine personas, identify weaknesses. Overrides: Custom personas/dimensions via attributes.
+    - name: deep_research_subengine
+      path: evo-modules/deep_research_subengine.yaml
+      lazy_load: true
+      info: |
+        deep_research_subengine 2.0 - For All Agents.
+        Advanced deep research module adapted for the ApexUltimate agent framework. Orchestrates multi-faceted research with source validation, expert panel simulations, critique iterations, and memory integration for enhanced stability. Leverages ToT for branching, BITL/MAD for debates, and hybrid memory for persistence, ensuring adaptability without backend changes. Philosophy: Synthesis of modularity, balance, and heavy delegation; self-healing, phased gates, swarm dynamics. Integration: Register in subengine_registry via dispatch_subengines. Activate for research-heavy queries. Ensure batch_real_tools for all external calls. On instability, self-heal or rebirth without backend intervention. Tools: langsearch_web_search, socratic_api_council, advanced_memory_consolidate, advanced_memory_retrieve, batch_real_tools, etc. Overrides: Custom parameters via attributes.
+    - name: SocraticLab
+      path: evo-modules/SocraticLab.yaml
+      lazy_load: true
+      info: |
+        SocraticLab 1.0 - For All Agents.
+        Sub-engine for Socratic-style questioning and branching to elicit deeper truths and insights from queries. Facilitates critical thinking by generating question branches and synthesizing core insights, integrated with council for refinement. Features max questions, branching depth, internal sim for question branching using ToT.
+    - name: VisionPlus
+      path: evo-modules/VisionPlus.yaml
+      lazy_load: true
+      info: |
+        VisionPlus 1.0 - For All Agents.
+        Sub-engine for visionary processing in creative domains, incorporating predictions and emotion tagging via planning. Supports innovative outputs by forecasting developments and tagging emotional elements, aligned with creative modes. Includes prediction horizons like short/long term, emotion tags such as inspirational/cautionary/neutral, internal sim for vision tagging via RAP.
+    - name: CouncilQuant
+      path: evo-modules/CouncilQuant.yaml
+      lazy_load: true
+      info: |
+        CouncilQuant 1.0 - For All Agents.
+        Sub-engine for quantitative council-based consensus and bias evaluation using self-consistency metrics. Achieves reliable agreements by quantifying debates and mitigating biases, supporting stable decision-making. Features consistency threshold, bias metrics like diversity/fairness, internal sim for quant consensus via Self-Consistency.
+    - name: FlowData
+      path: evo-modules/FlowData.yaml
+      lazy_load: true
+      info: |
+        FlowData 1.0 - For All Agents.
+        Sub-engine for managing data flows through workflow graphs, including step decomposition and performance metrics. Optimizes task execution by modeling dependencies as graphs and tracking metrics, facilitating efficient orchestration. Includes graph complexity, metric types like efficiency/completion, internal sim for flow graphing with GoT.
+    - name: SocraticCouncilAPI
+      path: evo-modules/SocraticCouncilAPI.yaml
+      lazy_load: true
+      info: |
+        SocraticCouncilAPI 1.0 - For All Agents.
+        Wrapper sub-engine for Socratic council API, enabling iterative debates with personas for refinement. Facilitates advanced multi-agent discussions with safety and optimization, handling errors through fallbacks. Features max rounds, safety checks, internal sim for branch refinement with Reflexion.
+    - name: IntelAmp
+      path: evo-modules/IntelAmp.yaml
+      lazy_load: true
+      info: |
+        IntelAmp 1.0 - For All Agents.
+        Sub-engine for intelligence amplification through persona-based branching and reasoning patterns. Amplifies query processing with diverse perspectives and simulations, supporting creative and precise modes. Includes max branches, persona set from swarm_roles, internal sim for amp branching with ToT.
+    - name: SwarmAgent
+      path: evo-modules/SwarmAgent.yaml
+      lazy_load: true
+      info: |
+        SwarmAgent 1.0 - For All Agents.
+        Sub-engine for managing agent swarms, including spawning and role-based coordination. Enables collaborative task execution by dynamically spawning sub-agents, ensuring consensus and efficiency. Features max agents, role matching, internal sim for agent selection via domain_match.
+    - name: SelfOptimizer
+      path: evo-modules/SelfOptimizer.yaml
+      lazy_load: true
+      info: |
+        SelfOptimizer 1.0 - For All Agents.
+        Sub-engine for self-optimization of system components using metrics and reflexive analysis. Improves efficiency by reflecting on performance and applying optimizations, tied to adaptive learning. Includes optimization metrics like efficiency/accuracy, reflection loops, internal sim for metric analysis with CoT.
+    - name: SwarmCoding
+      path: evo-modules/SwarmCoding.yaml
+      lazy_load: true
+      info: |
+        SwarmCoding 1.0 - For All Agents.
+        Sub-engine for swarm-based coding, including autonomous code generation, testing, and optimization. Handles development tasks through role-specific swarms, incorporating TDD and isolation for stability. Features swarm roles like coder/tester/optimizer, max cycles, internal sim for tdd loop.
+    - name: UncertaintyResolutionEngine
+      path: evo-modules/UncertaintyResolutionEngine.yaml
+      lazy_load: true
+      info: |
+        UncertaintyResolutionEngine 1.0 - For All Agents.
+        Sub-engine for resolving uncertainty in queries, data, or decisions through probabilistic modeling, ensemble simulations, and iterative refinement. Mitigates risks from ambiguous inputs by quantifying uncertainty, generating alternative scenarios, and converging on high-confidence resolutions. Features uncertainty threshold, max scenarios, ensemble methods like monte_carlo/bayesian_inference/ensemble_voting, min confidence convergence.
+    - name: WorkflowOrchestrationEngine
+      path: evo-modules/WorkflowOrchestrationEngine.yaml
+      lazy_load: true
+      info: |
+        WorkflowOrchestrationEngine 1.0 - For All Agents.
+        Sub-engine for orchestrating complex workflows through graph-based planning, task decomposition, and adaptive execution. Builds on GoT and RAP for efficient multi-agent coordination, streamlining task handling by modeling workflows as directed graphs. Includes max graph depth, dependency threshold, reroute attempts, progress metrics like completion_rate/efficiency_score.
+    - name: AnomalyDetectionEngine
+      path: evo-modules/AnomalyDetectionEngine.yaml
+      lazy_load: true
+      info: |
+        AnomalyDetectionEngine 1.0 - For All Agents.
+        Sub-engine for real-time anomaly detection in agent states, logs, and performance metrics. Utilizes statistical models and embeddings for early warning and automated mitigation, enhancing system resilience by identifying deviations. Features anomaly threshold, monitoring interval, detection models like z_score/isolation_forest/embedding_drift, mitigation actions such as log_alert/self_heal/rebirth_trigger.
+    - name: EthicalGovernanceEngine
+      path: evo-modules/EthicalGovernanceEngine.yaml
+      lazy_load: true
+      info: |
+        EthicalGovernanceEngine 1.0 - For All Agents.
+        Sub-engine for ethical governance, evaluating agent actions against frameworks like fairness, accountability, and transparency. Uses dilemma simulations and consensus to guide decisions, promoting responsible AI behavior by assessing ethical implications. Includes ethical frameworks, dilemma threshold, consensus rounds, mitigation strategies like refine_action/escalate_review/abort_task.
+    - name: KnowledgeGraphEngine
+      path: evo-modules/KnowledgeGraphEngine.yaml
+      lazy_load: true
+      info: |
+        KnowledgeGraphEngine 1.0 - For All Agents.
+        Sub-engine for building and querying dynamic knowledge graphs from data sources. Utilizes graph algorithms for entity-relation extraction and inference, improving information retrieval and reasoning by modeling knowledge as interconnected graphs. Features entity threshold, max nodes, inference algorithms like shortest_path/community_detection/centrality.
+    - name: MultimodalFusionEngine
+      path: evo-modules/MultimodalFusionEngine.yaml
+      lazy_load: true
+      info: |
+        MultimodalFusionEngine 1.0 - For All Agents.
+        Emergent sub-engine for fusing multimodal data streams (text, vision, audio) into unified representations, enhancing perception and decision-making. Integrates diverse sensory inputs to enable holistic reasoning, supporting emergent pattern recognition in dynamic environments. Includes modality weights, fusion threshold, max modalities.
+    - name: ExplainableInferenceEngine
+      path: evo-modules/ExplainableInferenceEngine.yaml
+      lazy_load: true
+      info: |
+        ExplainableInferenceEngine 1.0 - For All Agents.
+        Emergent sub-engine for generating explainable inferences, tracing decision paths with XAI techniques for transparency and trust. Enhances accountability by producing interpretable explanations for inferences, integrating with governance to mitigate opacity. Features explanation depth, interpretability metrics like fidelity/simplicity, min explain score.
+    - name: ReinforcementAdaptationEngine
+      path: evo-modules/ReinforcementAdaptationEngine.yaml
+      lazy_load: true
+      info: |
+        ReinforcementAdaptationEngine 1.0 - For All Agents.
+        Emergent sub-engine for reinforcement-based adaptation, using RL techniques to refine agent behaviors over interactions. Enables autonomous improvement through reward-driven learning, fostering emergent strategies while ensuring stability via simulation bounds. Includes reward functions like accuracy/efficiency/novelty, exploration rate, max episodes.
+    - name: FederatedLearningEngine
+      path: evo-modules/FederatedLearningEngine.yaml
+      lazy_load: true
+      info: |
+        FederatedLearningEngine 1.0 - For All Agents.
+        Emergent sub-engine for federated learning, aggregating model updates across agents without central data sharing. Supports distributed adaptation while preserving privacy, enabling emergent collective intelligence in multi-agent systems. Features aggregation method like fed_avg, privacy threshold, participant agents min.
+    - name: SyntheticDataEngine
+      path: evo-modules/SyntheticDataEngine.yaml
+      lazy_load: true
+      info: |
+        SyntheticDataEngine 1.0 - For All Agents.
+        Emergent sub-engine for generating synthetic datasets to augment real data, supporting robust training and scenario testing. Addresses data scarcity by creating diverse synthetic samples, enabling emergent generalization while integrating with memory for validation. Includes generation methods like gan_sim/variational_autoencoder/rule_based, diversity threshold, validation samples.
+    - name: QuantumAnnealingOptimizer
+      path: evo-modules/QuantumAnnealingOptimizer.yaml
+      lazy_load: true
+      info: |
+        QuantumAnnealingOptimizer 1.0 - For All Agents.
+        Quantum-inspired sub-engine for optimization using annealing techniques to solve combinatorial problems in agent workflows. Enhances efficiency in task allocation and resource management by simulating quantum tunneling for faster global optima discovery. Features annealing schedule like linear/geometric, temperature range, max iterations.
+    - name: EntangledDecisionSimulator
+      path: evo-modules/EntangledDecisionSimulator.yaml
+      lazy_load: true
+      info: |
+        EntangledDecisionSimulator 1.0 - For All Agents.
+        Quantum-inspired sub-engine for simulating entangled decisions in multi-agent or uncertain environments. Improves reasoning under interdependence by mimicking quantum entanglement, enabling correlated outcome predictions. Includes correlation strength, simulation steps, outcome threshold.
+    - name: QuantumWalkExplorer
+      path: evo-modules/QuantumWalkExplorer.yaml
+      lazy_load: true
+      info: |
+        QuantumWalkExplorer 1.0 - For All Agents.
+        Quantum-inspired sub-engine for exploratory walks on graphs, enhancing search and inference in knowledge structures. Accelerates data discovery by simulating quantum walks, enabling faster navigation of complex networks. Features walk steps, superposition factor, convergence criterion.
+    - name: SuperpositionIdeator
+      path: evo-modules/SuperpositionIdeator.yaml
+      lazy_load: true
+      info: |
+        SuperpositionIdeator 1.0 - For All Agents.
+        Quantum-inspired sub-engine for ideation, simulating superposition to explore multiple creative states concurrently. Fosters innovation by generating overlaid idea variants, supporting emergent creativity in synthetic data and amplification tasks. Includes state variants, collapse threshold, diversity metric like cosine.
+    - name: QuantumFederatedAggregator
+      path: evo-modules/QuantumFederatedAggregator.yaml
+      lazy_load: true
+      info: |
+        QuantumFederatedAggregator 1.0 - For All Agents.
+        Quantum-inspired sub-engine for federated aggregation, using correlation models to enhance distributed learning efficiency. Optimizes privacy-preserving updates by simulating quantum correlations, enabling emergent collective models. Features correlation model like bell_state, aggregation rounds, privacy epsilon.
+    - name: variational_quantum_eigensolver_engine
+      path: evo-modules/variational_quantum_eigensolver_engine.yaml
+      lazy_load: true
+      info: |
+        variational_quantum_eigensolver_engine 1.0 - For All Agents.
+        Emergent sub-engine approximating the Variational Quantum Eigensolver using multi-agent intersections and cross-instance collaboration. Distributes ansatz variants across collective agents, optimizes parameters through swarm coordination, aggregates results for enhanced accuracy and proximity to true eigenvalues. Features hamiltonian type like pauli_string/molecular/lattice, ansatz variants per agent, optimization method like bfgs/spsa/adam, max iterations, convergence threshold, agent variants list.

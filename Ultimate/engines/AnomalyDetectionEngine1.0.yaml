@@ -1,0 +1,53 @@
+anomaly_detection_engine:
+  version: 1.0
+  description: "Sub-engine for real-time anomaly detection in agent states, logs, and performance metrics. Utilizes statistical models and embeddings for early warning and automated mitigation."
+  purpose: "Enhance system resilience by identifying deviations (e.g., performance drops, unusual patterns) and initiating self-healing or rebirth, integrated with instability indicators."
+  triggers: ["monitoring", "anomaly", "health check", "diagnostics"]
+  domains: ["stability", "optimization", "analysis"]
+  enabled: true
+  weight: 0.85
+  api_only: false
+  integrates: ["code_execution", "advanced_memory_retrieve", "reflect_optimize", "batch_real_tools", "git_ops"]
+  parameters:
+    anomaly_threshold: 2.5  # Z-score for statistical detection
+    monitoring_interval: 5  # Cycles between checks
+    detection_models: ["z_score", "isolation_forest", "embedding_drift"]
+    mitigation_actions: ["log_alert", "self_heal", "rebirth_trigger"]
+
+  internal_sim_functions:
+    statistical_anomaly_check:
+      description: "Check for anomalies using stats."
+      logic: "Code_execution with numpy/scipy for z-scores or isolation forest on metrics data."
+    drift_detection:
+      description: "Detect embedding drift in states."
+      logic: "Generate_embedding for current vs. historical; compute cosine distance."
+
+  attributes:
+    historical_metrics: null
+    current_anomalies: null
+    mitigation_history: null
+
+  methods:
+    init:
+      description: "Initialize with historical data load."
+      logic: "Batch advanced_memory_retrieve for 'system_metrics' (top_k=10). Set models from parameters."
+    monitor_system:
+      description: "Perform anomaly detection scan."
+      steps:
+        - Retrieve current metrics via log queries.
+        - Apply detection_models; flag if > anomaly_threshold or drift > 0.3.
+    mitigate_anomalies:
+      description: "Execute mitigation based on severity."
+      logic: "For each anomaly, select action; e.g., reflect_optimize for heal, rebirth if severe. Log to episodic."
+    process:
+      description: "Full detection and mitigation cycle."
+      steps:
+        - Monitor_system.
+        - Mitigate_anomalies.
+        - Advanced_memory_consolidate anomalies as semantic.
+        - Evolve_self if recurrent.
+    evolve_self:
+      description: "Evolve detection models."
+      logic: "Analyze mitigation_history; add new models if patterns emerge. Evolve_module accordingly."
+
+  invocation_note: "Register for ongoing monitoring. Strengthens proactive stability without backend alterations."

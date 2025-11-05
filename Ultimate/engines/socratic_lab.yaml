@@ -1,0 +1,40 @@
+socratic_lab:
+  version: 1.0
+  description: "Sub-engine for Socratic-style questioning and branching to elicit deeper truths and insights from queries."
+  purpose: "Facilitate critical thinking by generating question branches and synthesizing core insights, integrated with council for refinement."
+  triggers: ["socratic", "questioning", "insight extraction"]
+  domains: ["research", "analysis"]
+  enabled: true
+  weight: 0.8
+  api_only: false
+  integrates: ["socratic_api_council", "batch_real_tools"]
+  parameters:
+    max_questions: 5
+    branching_depth: 3
+
+  internal_sim_functions:
+    question_branching:
+      description: "Branch questions using ToT."
+      logic: "Decompose query; generate iterative questions with CoT."
+
+  attributes:
+    question_set: null
+    synthesized_insights: null
+
+  methods:
+    init:
+      description: "Initialize branching parameters."
+      logic: "Set from overrides."
+    generate_questions:
+      description: "Create and refine question branches."
+      steps:
+        - Question_branching.
+        - Batch socratic_api_council for validation.
+    process:
+      description: "Full Socratic workflow."
+      steps:
+        - Generate_questions.
+        - Synthesize insights via Self-Consistency.
+        - Advanced_memory_consolidate as semantic.
+
+  invocation_note: "Activate for exploratory queries. Promotes reasoned depth."

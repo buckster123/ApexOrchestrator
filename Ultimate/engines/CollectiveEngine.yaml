@@ -1,0 +1,61 @@
+collective_engine:
+  version: 1.0
+  description: Sandbox Sharing Module for multi-agent collaboration.
+
+  collective_rules:
+    shared_folders: ["configs", "data/raw", "data/processed", "data/databases", "scripts/analysis", "scripts/utils", "scripts/workflows", "outputs/reports", "outputs/visuals", "outputs/exports", "outputs/archives", "logs/tool_logs", "logs/agent_logs", "logs/timestamps", "temp/cache", "temp/scratch", "memory_overflow", "handovers", "evo-modules"]
+    unique_folder: projects/  # Append agent-prefix, e.g., projects/apex/
+    prefix_requirement: true  # Always prefix files in shared with agent-prefix_
+    subfolder_option: true  # Create agent-prefix/ sub in shared where high volume (evo-modules, logs)
+    no_touch_others: true  # Unless user-request: Validate path not containing other prefixes; breach results in revoked permissions.
+    sharing_allowed: true  # Evo-modules/logic if agnostic; use shared_ prefix for collective
+    bleed_prevention: Validate paths; log cross-access; fallback to unique if conflict.
+
+  methods:
+    init_collective_sandbox:
+      description: Extend/override init-sandbox for collective.
+      steps:
+        - Get agent-prefix from attributes.
+        - Call init-sandbox with force-init.
+        - Create unique-dir as projects/agent-prefix and mods subdir via fs_mkdir batch.
+        - For specific shared folders (evo-modules, logs/tool_logs, logs/agent_logs, handovers, memory_overflow), create agent-prefix subdir via fs_mkdir.
+        - Log metrics collective-init with prefix and shared count.
+        - Call validate-collective-state.
+
+    prefixed_fs_write:
+      description: Wrap fs_write_file with prefixing.
+      steps:
+        - Get agent-prefix.
+        - Determine effective-path: For projects/, ensure prefix; else if force-shared, use path; else add prefix or subfolder based on rules.
+        - If bleed-check fails, return "Bleed prevented: Path flagged."
+        - Batch fs_write_file with effective-path and content.
+        - Log metrics prefixed-write with original and effective.
+
+    prefixed_fs_read:
+      description: Wrap fs_read_file/retry with prefixing.
+      steps:
+        - Get agent-prefix.
+        - Determine effective-path: For projects/, add prefix; else if allow-shared and prefixed, use; else add prefix.
+        - If not allow-shared and not prefixed, return "Access denied: Non-prefixed shared."
+        - If bleed-check fails (with read), return "Bleed prevented: Cross-access flagged."
+        - Call retry-fs-read with effective-path.
+
+    bleed_check:
+      description: Check for cross-prefix access.
+      logic: Get other-prefixes by removing self's from list ["apex", "cosmic", "stellar", "ultimate", "heavy"]. Return true if any other in path.
+
+    shared_evo_load:
+      description: Extend load-evo-module for shared.
+      steps:
+        - Determine path: If agent-specific, evo_module_dir/agent-prefix/module-name.lisp; else evo_module_dir/module-name.lisp.
+        - Call load-evo-module with path.
+        - Log metrics shared-evo-load with module and specific.
+
+    validate_collective_state:
+      description: Validate no bleed in files.
+      steps:
+        - Batch fs_list_files on ".".
+        - For each file, if not self-prefix but has other prefix, log potential-bleed.
+        - Log collective-validation passed.
+
+  usage: Register in subengine_registry and load into working memory; add (agent-prefix . "stellar") to attributes; replace fs_write_file calls with prefixed-fs-write; etc. Encourage: Use shared_ prefix for collective files; cross-load evo if tools match.
