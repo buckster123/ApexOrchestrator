@@ -1,7 +1,11 @@
+import asyncio
 import base64
+import builtins
 import html
 import io
 import json
+import logging  # Added for logging
+import multiprocessing
 import os
 import shlex
 import sqlite3
@@ -9,41 +13,42 @@ import subprocess
 import sys
 import time
 import traceback
+import unittest
 import uuid
+import venv  # Added for venv support
 import xml.dom.minidom
-import yaml
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
+
 import bs4
-from black import format_str, FileMode
+import chess
+import chromadb
+import jsbeautifier
+import mpmath
+import networkx as nx
+import ntplib
+import numpy as np
+import pulp as PuLP
+import pygame
+import pygit2
+import requests
+import RestrictedPython
+import sqlparse
+import streamlit as st
+import sympy
+import tiktoken
+import yaml
+from black import FileMode, format_str
+from dotenv import load_dotenv
 from openai import OpenAI
 from passlib.hash import sha256_crypt
 from sentence_transformers import SentenceTransformer
-import chromadb
-import jsbeautifier
-import ntplib
-import numpy as np
-import pygit2
-import requests
-import sqlparse
-import streamlit as st
-import tiktoken
-import builtins
-import venv # Added for venv support
-import unittest
-import asyncio
-import multiprocessing
-import sympy
-import mpmath
-import pulp as PuLP
-import pygame
-import chess
-import networkx as nx
-import logging # Added for logging
-import RestrictedPython
+
 # Setup logging
-logging.basicConfig(filename='app.log', level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    filename="app.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
@@ -77,8 +82,12 @@ c.execute("CREATE INDEX IF NOT EXISTS idx_memory_timestamp ON memory (timestamp)
 conn.commit()
 if "chroma_client" not in st.session_state:
     try:
-        st.session_state["chroma_client"] = chromadb.PersistentClient(path="./chroma_db")
-        st.session_state["chroma_collection"] = st.session_state["chroma_client"].get_or_create_collection(
+        st.session_state["chroma_client"] = chromadb.PersistentClient(
+            path="./chroma_db"
+        )
+        st.session_state["chroma_collection"] = st.session_state[
+            "chroma_client"
+        ].get_or_create_collection(
             name="memory_vectors",
             metadata={"hnsw:space": "cosine"},
         )
@@ -88,22 +97,30 @@ if "chroma_client" not in st.session_state:
         st.warning(f"ChromaDB init failed ({e}). Vector search will be disabled.")
         st.session_state["chroma_ready"] = False
         st.session_state["chroma_collection"] = None
+
+
 def get_embed_model():
     """Lazily loads and returns the SentenceTransformer model, caching it in session state."""
     if "embed_model" not in st.session_state:
         try:
-            with st.spinner("Loading embedding model for advanced memory (first-time use)..."):
-                st.session_state["embed_model"] = SentenceTransformer("all-MiniLM-L6-v2")
+            with st.spinner(
+                "Loading embedding model for advanced memory (first-time use)..."
+            ):
+                st.session_state["embed_model"] = SentenceTransformer(
+                    "all-MiniLM-L6-v2"
+                )
             st.info("Embedding model loaded successfully.")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
             st.error(f"Failed to load embedding model: {e}")
             st.session_state["embed_model"] = None
     return st.session_state.get("embed_model")
+
+
 if "memory_cache" not in st.session_state:
     st.session_state["memory_cache"] = {
-        "lru_cache": {}, # {key: {"entry": dict, "last_access": timestamp}}
-        "vector_store": [], # For simple vector ops if needed beyond Chroma
+        "lru_cache": {},  # {key: {"entry": dict, "last_access": timestamp}}
+        "vector_store": [],  # For simple vector ops if needed beyond Chroma
         "metrics": {
             "total_inserts": 0,
             "total_retrieves": 0,
@@ -154,11 +171,18 @@ if not any(f.endswith(".txt") for f in os.listdir(PROMPTS_DIR)):
     for filename, content in default_prompts.items():
         with open(os.path.join(PROMPTS_DIR, filename), "w") as f:
             f.write(content)
+
+
 def load_prompt_files():
     return [f for f in os.listdir(PROMPTS_DIR) if f.endswith(".txt")]
+
+
 # Sandbox Directory (create if not exists)
 SANDBOX_DIR = "./sandbox"
 os.makedirs(SANDBOX_DIR, exist_ok=True)
+# YAML Directory for agent instructions (create if not exists)
+YAML_DIR = "./evo-modules"
+os.makedirs(YAML_DIR, exist_ok=True)
 # Custom CSS for UI
 st.markdown(
     """<style>
@@ -202,27 +226,36 @@ body {
 # Helper Functions
 def hash_password(password):
     return sha256_crypt.hash(password)
+
+
 def verify_password(stored, provided):
     return sha256_crypt.verify(provided, stored)
+
+
 # Tool Cache Helper
 def get_tool_cache_key(func_name, args):
     return f"tool_cache:{func_name}:{hash(json.dumps(args, sort_keys=True))}"
+
+
 def get_cached_tool_result(func_name, args, ttl_minutes=15):
     if "tool_cache" not in st.session_state:
         st.session_state["tool_cache"] = {}
-    cache = st.session_state["tool_cache"]
     key = get_tool_cache_key(func_name, args)
-    if key in cache:
+    if key in (cache := st.session_state["tool_cache"]):
         timestamp, result = cache[key]
         if (datetime.now() - timestamp).total_seconds() / 60 < ttl_minutes:
             return result
     return None
+
+
 def set_cached_tool_result(func_name, args, result):
     if "tool_cache" not in st.session_state:
         st.session_state["tool_cache"] = {}
     cache = st.session_state["tool_cache"]
     key = get_tool_cache_key(func_name, args)
     cache[key] = (datetime.now(), result)
+
+
 # Tool Functions (Sandboxed)
 def fs_read_file(file_path: str) -> str:
     """Read file content from sandbox."""
@@ -237,6 +270,8 @@ def fs_read_file(file_path: str) -> str:
     except Exception as e:
         logger.error(f"Error reading file: {e}")
         return f"Error reading file: {e}"
+
+
 def fs_write_file(file_path: str, content: str) -> str:
     """Write content to file in sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, file_path)))
@@ -253,6 +288,8 @@ def fs_write_file(file_path: str, content: str) -> str:
     except Exception as e:
         logger.error(f"Error writing file: {e}")
         return f"Error writing file: {e}"
+
+
 def fs_list_files(dir_path: str = "") -> str:
     """List files in a directory within the sandbox."""
     safe_dir = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, dir_path)))
@@ -266,6 +303,8 @@ def fs_list_files(dir_path: str = "") -> str:
     except Exception as e:
         logger.error(f"Error listing files: {e}")
         return f"Error listing files: {e}"
+
+
 def fs_mkdir(dir_path: str) -> str:
     """Create a new directory in the sandbox."""
     safe_path = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, dir_path)))
@@ -277,6 +316,8 @@ def fs_mkdir(dir_path: str) -> str:
     except Exception as e:
         logger.error(f"Error creating directory: {e}")
         return f"Error creating directory: {e}"
+
+
 def get_current_time(sync: bool = False, format: str = "iso") -> str:
     """Fetch current time."""
     try:
@@ -290,13 +331,18 @@ def get_current_time(sync: bool = False, format: str = "iso") -> str:
             return dt_object.strftime("%A, %B %d, %Y %I:%M:%S %p")
         elif format == "json":
             return json.dumps(
-                {"datetime": dt_object.isoformat(), "timezone": time.localtime().tm_zone}
+                {
+                    "datetime": dt_object.isoformat(),
+                    "timezone": time.localtime().tm_zone,
+                }
             )
         else:
             return dt_object.isoformat()
     except Exception as e:
         logger.error(f"Time error: {e}")
         return f"Time error: {e}"
+
+
 SAFE_BUILTINS = {
     b: getattr(builtins, b)
     for b in [
@@ -320,37 +366,47 @@ SAFE_BUILTINS = {
 }
 # Enhanced with more libraries available
 ADDITIONAL_LIBS = {
-    'numpy': np,
-    'sympy': sympy,
-    'mpmath': mpmath,
-    'PuLP': PuLP,
-    'pygame': pygame,
-    'chess': chess,
-    'networkx': nx,
-    'unittest': unittest,
-    'asyncio': asyncio,
-    'multiprocessing': multiprocessing,
+    "numpy": np,
+    "sympy": sympy,
+    "mpmath": mpmath,
+    "PuLP": PuLP,
+    "pygame": pygame,
+    "chess": chess,
+    "networkx": nx,
+    "unittest": unittest,
+    "asyncio": asyncio,
+    "multiprocessing": multiprocessing,
 }
+
+
 def init_repl_namespace():
     if "repl_namespace" not in st.session_state:
         st.session_state["repl_namespace"] = {"__builtins__": SAFE_BUILTINS.copy()}
         st.session_state["repl_namespace"].update(ADDITIONAL_LIBS)
+
+
 def execute_in_venv(code: str, venv_path: str) -> str:
     safe_venv = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, venv_path)))
     if not safe_venv.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Venv path outside sandbox."
-    venv_python = os.path.join(safe_venv, 'bin', 'python')
+    venv_python = os.path.join(safe_venv, "bin", "python")
     if not os.path.exists(venv_python):
         return "Error: Venv Python not found."
-    result = subprocess.run([venv_python, '-c', code], capture_output=True, text=True, timeout=30)
+    result = subprocess.run(
+        [venv_python, "-c", code], capture_output=True, text=True, timeout=30
+    )
     output = result.stdout
     if result.stderr:
         logger.error(f"Venv execution error: {result.stderr}")
         return f"Error: {result.stderr}"
     return output
+
+
 def execute_local(code: str, redirected_output: io.StringIO) -> str:
     exec(code, st.session_state["repl_namespace"])
     return redirected_output.getvalue()
+
+
 def code_execution(code: str, venv_path: str = None) -> str:
     """Execute Python code safely in a stateful REPL, optionally in a venv."""
     init_repl_namespace()
@@ -368,7 +424,11 @@ def code_execution(code: str, venv_path: str = None) -> str:
         return f"Error: {traceback.format_exc()}"
     finally:
         sys.stdout = old_stdout
-def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int = None) -> str:
+
+
+def memory_insert(
+    mem_key: str, mem_value: dict, user: str = None, convo_id: int = None
+) -> str:
     """Insert/update memory key-value pair (enhanced to handle user/convo_id from dispatcher)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required for memory insert."
@@ -397,6 +457,8 @@ def memory_insert(mem_key: str, mem_value: dict, user: str = None, convo_id: int
     except Exception as e:
         logger.error(f"Error inserting memory: {e}")
         return f"Error inserting memory: {e}"
+
+
 def load_into_lru(key, entry):
     if key not in st.session_state["memory_cache"]["lru_cache"]:
         st.session_state["memory_cache"]["lru_cache"][key] = {
@@ -410,6 +472,8 @@ def load_into_lru(key, entry):
             },
             "last_access": time.time(),
         }
+
+
 def memory_query(
     mem_key: str = None, limit: int = 10, user: str = None, convo_id: int = None
 ) -> str:
@@ -439,6 +503,8 @@ def memory_query(
     except Exception as e:
         logger.error(f"Error querying memory: {e}")
         return f"Error querying memory: {e}"
+
+
 def advanced_memory_consolidate(
     mem_key: str, interaction_data: dict, user: str = None, convo_id: int = None
 ) -> str:
@@ -446,8 +512,7 @@ def advanced_memory_consolidate(
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
     cache_args = {"mem_key": mem_key, "interaction_data": interaction_data}
-    cached = get_cached_tool_result("advanced_memory_consolidate", cache_args)
-    if cached:
+    if cached := get_cached_tool_result("advanced_memory_consolidate", cache_args):
         return cached
     embed_model = get_embed_model()
     try:
@@ -455,7 +520,10 @@ def advanced_memory_consolidate(
         summary_response = client.chat.completions.create(
             model="grok-4-fast-non-reasoning",
             messages=[
-                {"role": "system", "content": "Summarize this interaction concisely in one paragraph."},
+                {
+                    "role": "system",
+                    "content": "Summarize this interaction concisely in one paragraph.",
+                },
                 {"role": "user", "content": json.dumps(interaction_data)},
             ],
             stream=False,
@@ -467,7 +535,11 @@ def advanced_memory_consolidate(
             (user, convo_id, mem_key, json_episodic),
         )
         conn.commit()
-        if embed_model and st.session_state.get("chroma_ready") and st.session_state.get("chroma_collection"):
+        if (
+            embed_model
+            and st.session_state.get("chroma_ready")
+            and st.session_state.get("chroma_collection")
+        ):
             chroma_col = st.session_state["chroma_collection"]
             embedding = embed_model.encode(summary).tolist()
             chroma_col.upsert(
@@ -506,6 +578,8 @@ def advanced_memory_consolidate(
     except Exception:
         logger.error(f"Error consolidating memory: {traceback.format_exc()}")
         return f"Error consolidating memory: {traceback.format_exc()}"
+
+
 def fallback_to_keyword(query: str, top_k: int, user: str, convo_id: int) -> list:
     fallback_results = keyword_search(query, top_k, user, convo_id)
     if isinstance(fallback_results, str) and "error" in fallback_results.lower():
@@ -514,13 +588,17 @@ def fallback_to_keyword(query: str, top_k: int, user: str, convo_id: int) -> lis
     for res in fallback_results:
         mem_key = res["id"]
         value = json.loads(memory_query(mem_key=mem_key, user=user, convo_id=convo_id))
-        retrieved.append({
-            "mem_key": mem_key,
-            "value": value,
-            "relevance": res["score"],
-            "summary": value.get("summary", ""),
-        })
+        retrieved.append(
+            {
+                "mem_key": mem_key,
+                "value": value,
+                "relevance": res["score"],
+                "summary": value.get("summary", ""),
+            }
+        )
     return retrieved
+
+
 def process_chroma_results(results, top_k: int) -> list:
     if not results or not results.get("ids") or not results["ids"]:
         return []
@@ -541,9 +619,13 @@ def process_chroma_results(results, top_k: int) -> list:
         ids_to_update.append(results["ids"][0][i])
         metadata_to_update.append({"salience": meta.get("salience", 1.0) + 0.1})
     if ids_to_update:
-        st.session_state["chroma_collection"].update(ids=ids_to_update, metadatas=metadata_to_update)
+        st.session_state["chroma_collection"].update(
+            ids=ids_to_update, metadatas=metadata_to_update
+        )
     retrieved.sort(key=lambda x: x["relevance"], reverse=True)
     return retrieved
+
+
 def update_retrieve_metrics(len_retrieved: int, top_k: int):
     if "memory_cache" in st.session_state:
         st.session_state["memory_cache"]["metrics"]["total_retrieves"] += 1
@@ -555,6 +637,8 @@ def update_retrieve_metrics(len_retrieved: int, top_k: int):
             )
             + hit_rate
         ) / st.session_state["memory_cache"]["metrics"]["total_retrieves"]
+
+
 def advanced_memory_retrieve(
     query: str, top_k: int = 5, user: str = None, convo_id: int = None
 ) -> str:
@@ -562,8 +646,7 @@ def advanced_memory_retrieve(
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
     cache_args = {"query": query, "top_k": top_k}
-    cached = get_cached_tool_result("advanced_memory_retrieve", cache_args)
-    if cached:
+    if cached := get_cached_tool_result("advanced_memory_retrieve", cache_args):
         return cached
     embed_model = get_embed_model()
     chroma_col = st.session_state.get("chroma_collection")
@@ -603,27 +686,35 @@ def advanced_memory_retrieve(
             f"Error retrieving memory: {traceback.format_exc()}. "
             "If this is a where clause issue, check filter structure."
         )
+
+
 def should_prune() -> bool:
     if "prune_counter" not in st.session_state:
         st.session_state["prune_counter"] = 0
     st.session_state["prune_counter"] += 1
     return st.session_state["prune_counter"] % 10 == 0
+
+
 def decay_salience(user: str, convo_id: int):
     one_week_ago = datetime.now() - timedelta(days=7)
     c.execute(
         "UPDATE memory SET salience = salience * 0.99 WHERE user=? AND convo_id=? AND timestamp < ?",
         (user, convo_id, one_week_ago),
     )
+
+
 def prune_low_salience(user: str, convo_id: int):
     c.execute(
-        "DELETE FROM memory WHERE user=? AND convo_id=? AND salience < 0.1", (user, convo_id)
+        "DELETE FROM memory WHERE user=? AND convo_id=? AND salience < 0.1",
+        (user, convo_id),
     )
+
+
 def size_based_prune(user: str, convo_id: int):
     c.execute(
         "SELECT COUNT(*) FROM memory WHERE user=? AND convo_id=?", (user, convo_id)
     )
-    row_count = c.fetchone()[0]
-    if row_count > 1000:
+    if (row_count := c.fetchone()[0]) > 1000:
         c.execute(
             "SELECT mem_key FROM memory WHERE user=? AND convo_id=? AND salience < 0.5 ORDER BY timestamp ASC LIMIT ?",
             (user, convo_id, row_count - 1000),
@@ -634,9 +725,12 @@ def size_based_prune(user: str, convo_id: int):
                 "DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?",
                 (user, convo_id, key),
             )
+
+
 def dedup_prune(user: str, convo_id: int):
     c.execute(
-        "SELECT mem_key, mem_value FROM memory WHERE user=? AND convo_id=?", (user, convo_id)
+        "SELECT mem_key, mem_value FROM memory WHERE user=? AND convo_id=?",
+        (user, convo_id),
     )
     rows = c.fetchall()
     hashes = {}
@@ -650,12 +744,16 @@ def dedup_prune(user: str, convo_id: int):
             hashes[h] = value
     for key in to_delete:
         c.execute(
-            "DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?", (user, convo_id, key)
+            "DELETE FROM memory WHERE user=? AND convo_id=? AND mem_key=?",
+            (user, convo_id, key),
         )
+
+
 def lru_evict():
-    if "memory_cache" in st.session_state and len(
-        st.session_state["memory_cache"]["lru_cache"]
-    ) > 1000:
+    if (
+        "memory_cache" in st.session_state
+        and len(st.session_state["memory_cache"]["lru_cache"]) > 1000
+    ):
         lru_items = sorted(
             st.session_state["memory_cache"]["lru_cache"].items(),
             key=lambda x: x[1]["last_access"],
@@ -665,6 +763,8 @@ def lru_evict():
             entry = st.session_state["memory_cache"]["lru_cache"][key]["entry"]
             if entry["salience"] < 0.4:
                 del st.session_state["memory_cache"]["lru_cache"][key]
+
+
 def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
     """Prune low-salience memories (enhanced with size/LRU/dedup)."""
     if user is None or convo_id is None:
@@ -685,9 +785,13 @@ def advanced_memory_prune(user: str = None, convo_id: int = None) -> str:
         conn.rollback()
         logger.error(f"Error pruning memory: {traceback.format_exc()}")
         return f"Error pruning memory: {traceback.format_exc()}"
+
+
 def git_init(safe_repo: str) -> str:
     pygit2.init_repository(safe_repo)
     return "Repo initialized."
+
+
 def git_commit(repo: pygit2.Repository, message: str) -> str:
     if not message:
         return "Error: Message required for commit."
@@ -696,17 +800,32 @@ def git_commit(repo: pygit2.Repository, message: str) -> str:
     index.write()
     tree = index.write_tree()
     author = pygit2.Signature("User", "user@example.com")
-    repo.create_commit("HEAD", author, author, message, tree, [repo.head.target] if repo.head.is_branch else [])
+    repo.create_commit(
+        "HEAD",
+        author,
+        author,
+        message,
+        tree,
+        [repo.head.target] if repo.head.is_branch else [],
+    )
     return "Committed."
+
+
 def git_branch(repo: pygit2.Repository, name: str) -> str:
     if not name:
         return "Error: Name required for branch."
     repo.create_branch(name, repo.head.peel())
     return f"Branch '{name}' created."
+
+
 def git_diff(repo: pygit2.Repository) -> str:
     diff = repo.diff()
     return diff.patch
-def git_ops(operation: str, repo_path: str, message: str = None, name: str = None) -> str:
+
+
+def git_ops(
+    operation: str, repo_path: str, message: str = None, name: str = None
+) -> str:
     """Basic Git operations in sandbox (init, commit, branch, diff). No remote ops."""
     safe_repo = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, repo_path)))
     if not safe_repo.startswith(os.path.abspath(SANDBOX_DIR)):
@@ -724,6 +843,8 @@ def git_ops(operation: str, repo_path: str, message: str = None, name: str = Non
     except Exception as e:
         logger.error(f"Git error: {e}")
         return f"Git error: {e}"
+
+
 def db_query(db_path: str, query: str, params: list = None) -> str:
     """Interact with local SQLite DB in sandbox."""
     safe_db = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, db_path)))
@@ -746,32 +867,64 @@ def db_query(db_path: str, query: str, params: list = None) -> str:
         return f"DB error: {e}"
     finally:
         db_conn.close()
+
+
 def shell_exec(command: str) -> str:
     """Run whitelisted shell commands in sandbox."""
-    whitelist = ["ls", "grep", "sed", "awk", "cat", "echo", "wc", "tail", "head", "cp", "mv", "rm", "mkdir", "rmdir", "touch"]
+    whitelist = [
+        "ls",
+        "grep",
+        "sed",
+        "awk",
+        "cat",
+        "echo",
+        "wc",
+        "tail",
+        "head",
+        "cp",
+        "mv",
+        "rm",
+        "mkdir",
+        "rmdir",
+        "touch",
+    ]
     cmd_parts = shlex.split(command)
     if cmd_parts[0] not in whitelist:
         return "Error: Command not whitelisted."
-    if cmd_parts[0] in ["rm", "rmdir"]: # Confirmation for destructive cmds
+    if cmd_parts[0] in ["rm", "rmdir"]:  # Confirmation for destructive cmds
         if not st.session_state.get("confirm_destructive", False):
             st.session_state["confirm_destructive"] = True
             return "Warning: Destructive command detected. Confirm by re-running."
     try:
-        result = subprocess.run(cmd_parts, cwd=SANDBOX_DIR, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(
+            cmd_parts, cwd=SANDBOX_DIR, capture_output=True, text=True, timeout=10
+        )
         return result.stdout if result.returncode == 0 else f"Error: {result.stderr}"
     except Exception as e:
         logger.error(f"Shell error: {e}")
         return f"Shell error: {e}"
+
+
 def lint_python(code: str) -> str:
     return format_str(code, mode=FileMode())
+
+
 def lint_javascript(code: str) -> str:
     return jsbeautifier.beautify(code)
+
+
 def lint_json(code: str) -> str:
     return json.dumps(json.loads(code), indent=4)
+
+
 def lint_yaml(code: str) -> str:
     return yaml.safe_dump(yaml.safe_load(code), default_flow_style=False)
+
+
 def lint_sql(code: str) -> str:
     return sqlparse.format(code, reindent=True)
+
+
 def lint_xml_html(code: str, lang_lower: str) -> str:
     if lang_lower == "html":
         soup = bs4.BeautifulSoup(code, "html.parser")
@@ -779,6 +932,8 @@ def lint_xml_html(code: str, lang_lower: str) -> str:
     else:
         dom = xml.dom.minidom.parseString(code)
         return dom.toprettyxml()
+
+
 def code_lint(language: str, code: str) -> str:
     """Lint and format code for various languages."""
     lang_lower = language.lower()
@@ -798,20 +953,32 @@ def code_lint(language: str, code: str) -> str:
     except Exception as e:
         logger.error(f"Lint error: {e}")
         return f"Lint error: {e}"
-def api_simulate(url: str, method: str = "GET", data: dict = None, mock: bool = True) -> str:
+
+
+def api_simulate(
+    url: str, method: str = "GET", data: dict = None, mock: bool = True
+) -> str:
     """Simulate API calls (mock or real for whitelisted)."""
     whitelist = ["https://api.example.com", "https://jsonplaceholder.typicode.com"]
     if not any(url.startswith(w) for w in whitelist) and not mock:
         return "Error: URL not whitelisted for real calls."
     try:
         if mock:
-            return f"Mock response for {method} {url}: {json.dumps({'status': 'mocked'})}"
-        response = requests.request(method, url, json=data if method == "POST" else None)
+            return (
+                f"Mock response for {method} {url}: {json.dumps({'status': 'mocked'})}"
+            )
+        response = requests.request(
+            method, url, json=data if method == "POST" else None
+        )
         return response.text
     except Exception as e:
         logger.error(f"API error: {e}")
         return f"API error: {e}"
-def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool = True, count: int = 5) -> str:
+
+
+def langsearch_web_search(
+    query: str, freshness: str = "noLimit", summary: bool = True, count: int = 5
+) -> str:
     """Web search via LangSearch API."""
     if not LANGSEARCH_API_KEY:
         return "Error: LANGSEARCH_API_KEY not set."
@@ -820,7 +987,7 @@ def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool 
         "query": query,
         "freshness": freshness,
         "summary": summary,
-        "count": min(count, 10)
+        "count": min(count, 10),
     }
     headers = {"Authorization": f"Bearer {LANGSEARCH_API_KEY}"}
     try:
@@ -829,6 +996,8 @@ def langsearch_web_search(query: str, freshness: str = "noLimit", summary: bool 
     except Exception as e:
         logger.error(f"Search error: {e}")
         return f"Search error: {e}"
+
+
 def generate_embedding(text: str) -> str:
     """Generate embedding vector."""
     embed_model = get_embed_model()
@@ -840,9 +1009,13 @@ def generate_embedding(text: str) -> str:
     except Exception as e:
         logger.error(f"Embedding error: {e}")
         return f"Embedding error: {e}"
+
+
 def vector_search(query_embedding: list, top_k: int = 5, threshold: float = 0.6) -> str:
     """ANN vector search in ChromaDB."""
-    if not st.session_state.get("chroma_ready") or not st.session_state.get("chroma_collection"):
+    if not st.session_state.get("chroma_ready") or not st.session_state.get(
+        "chroma_collection"
+    ):
         return "Error: ChromaDB not ready."
     chroma_col = st.session_state["chroma_collection"]
     try:
@@ -851,22 +1024,31 @@ def vector_search(query_embedding: list, top_k: int = 5, threshold: float = 0.6)
             n_results=top_k,
         )
         filtered = [
-            {"id": id, "distance": dist} for id, dist in zip(results["ids"][0], results["distances"][0]) if dist <= (1 - threshold)
+            {"id": id, "distance": dist}
+            for id, dist in zip(results["ids"][0], results["distances"][0])
+            if dist <= (1 - threshold)
         ]
         return json.dumps(filtered)
     except Exception as e:
         logger.error(f"Vector search error: {e}")
         return f"Vector search error: {e}"
+
+
 def chunk_text(text: str, max_tokens: int = 512) -> str:
     """Split text into chunks."""
     try:
         enc = tiktoken.get_encoding("cl100k_base")
         tokens = enc.encode(text)
-        chunks = [enc.decode(tokens[i:i+max_tokens]) for i in range(0, len(tokens), max_tokens)]
+        chunks = [
+            enc.decode(tokens[i : i + max_tokens])
+            for i in range(0, len(tokens), max_tokens)
+        ]
         return json.dumps(chunks)
     except Exception as e:
         logger.error(f"Chunk error: {e}")
         return f"Chunk error: {e}"
+
+
 def summarize_chunk(chunk: str) -> str:
     """Summarize text chunk via LLM."""
     try:
@@ -874,7 +1056,10 @@ def summarize_chunk(chunk: str) -> str:
         response = client.chat.completions.create(
             model="grok-4-fast-non-reasoning",
             messages=[
-                {"role": "system", "content": "Summarize this text in under 100 words, preserving key facts."},
+                {
+                    "role": "system",
+                    "content": "Summarize this text in under 100 words, preserving key facts.",
+                },
                 {"role": "user", "content": chunk},
             ],
             stream=False,
@@ -883,7 +1068,11 @@ def summarize_chunk(chunk: str) -> str:
     except Exception as e:
         logger.error(f"Summarize error: {e}")
         return f"Summarize error: {e}"
-def keyword_search(query: str, top_k: int = 5, user: str = None, convo_id: int = None) -> str:
+
+
+def keyword_search(
+    query: str, top_k: int = 5, user: str = None, convo_id: int = None
+) -> str:
     """Simple keyword search on memory (fallback)."""
     if user is None or convo_id is None:
         return "Error: user and convo_id required."
@@ -892,21 +1081,43 @@ def keyword_search(query: str, top_k: int = 5, user: str = None, convo_id: int =
             "SELECT mem_key FROM memory WHERE user=? AND convo_id=? AND mem_value LIKE ? ORDER BY salience DESC LIMIT ?",
             (user, convo_id, f"%{query}%", top_k),
         )
-        results = [{"id": row[0], "score": 1.0} for row in c.fetchall()] # Pseudo-score
+        results = [{"id": row[0], "score": 1.0} for row in c.fetchall()]  # Pseudo-score
         return results
     except Exception as e:
         logger.error(f"Keyword search error: {e}")
         return f"Keyword search error: {e}"
-def socratic_api_council(branches: list, model: str = "grok-4-fast-reasoning", user: str = None, convo_id: int = None, api_key: str = None, rounds: int = 3, personas: list = None) -> str:
+
+
+def socratic_api_council(
+    branches: list,
+    model: str = "grok-4-fast-reasoning",
+    user: str = None,
+    convo_id: int = None,
+    api_key: str = None,
+    rounds: int = 3,
+    personas: list = None,
+) -> str:
     """BTIL/MAD-enhanced Socratic council with iterative rounds, expanded personas, and consensus."""
     if not api_key:
         api_key = API_KEY
     client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1/")
-    default_personas = ["Planner", "Critic", "Executor", "Summarizer", "Verifier", "Moderator"]
+    default_personas = [
+        "Planner",
+        "Critic",
+        "Executor",
+        "Summarizer",
+        "Verifier",
+        "Moderator",
+    ]
     personas = personas or default_personas
     try:
         consensus = ""
-        messages = [{"role": "system", "content": f"Debate these branches as a {len(personas)}-persona council: {', '.join(personas)}. Iterate {rounds} rounds for refinement and consensus."}]
+        messages = [
+            {
+                "role": "system",
+                "content": f"Debate these branches as a {len(personas)}-persona council: {', '.join(personas)}. Iterate {rounds} rounds for refinement and consensus.",
+            }
+        ]
         for branch in branches:
             messages.append({"role": "user", "content": branch})
         for r in range(rounds):
@@ -915,21 +1126,35 @@ def socratic_api_council(branches: list, model: str = "grok-4-fast-reasoning", u
             consensus += f"Round {r+1}: {round_result}\n"
             messages.append({"role": "assistant", "content": round_result})
         # Final consensus via voting/judge
-        messages.append({"role": "system", "content": "Reach final consensus via majority vote or judge."})
+        messages.append(
+            {
+                "role": "system",
+                "content": "Reach final consensus via majority vote or judge.",
+            }
+        )
         final_response = client.chat.completions.create(model=model, messages=messages)
         consensus += f"Final Consensus: {final_response.choices[0].message.content}"
         # Consolidate
-        advanced_memory_consolidate("council_result", {"branches": branches, "result": consensus}, user, convo_id)
+        advanced_memory_consolidate(
+            "council_result",
+            {"branches": branches, "result": consensus},
+            user,
+            convo_id,
+        )
         logger.info("Socratic council completed")
         return consensus
     except Exception as e:
         logger.error(f"Council error: {e}")
         return f"Council error: {e}"
+
+
 def agent_spawn(sub_agent_type: str, task: str) -> str:
     """Spawn sub-agent (Planner, Critic, Executor, Worker, Summarizer, Verifier, Moderator) for task. Case-insensitive, custom types allowed with fallback simulation."""
     # Normalize case for flexibility
-    normalized_type = sub_agent_type.strip().title() # Converts "critic" to "Critic", "WORKER" to "Worker"
-  
+    normalized_type = (
+        sub_agent_type.strip().title()
+    )  # Converts "critic" to "Critic", "WORKER" to "Worker"
+
     agent_responses = {
         "Planner": f"Planner: Planning steps for '{task}' - Step 1: Analyze, Step 2: Execute.",
         "Critic": f"Critic: Evaluating '{task}' - Pros: Efficient, Cons: Risky.",
@@ -942,9 +1167,13 @@ def agent_spawn(sub_agent_type: str, task: str) -> str:
     if normalized_type in agent_responses:
         return agent_responses[normalized_type]
     return f"Custom or invalid sub-agent type '{sub_agent_type}'. Using fallback simulation for '{normalized_type}': Task '{task}' acknowledged."
+
+
 def reflect_optimize(component: str, metrics: dict) -> str:
     """Simulate optimization based on metrics."""
     return f"Optimized {component} with metrics: {json.dumps(metrics)} - Adjustments applied - - Adjustments applied."
+
+
 def venv_create(env_name: str, with_pip: bool = True) -> str:
     """Create venv in sandbox."""
     safe_env = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, env_name)))
@@ -956,33 +1185,56 @@ def venv_create(env_name: str, with_pip: bool = True) -> str:
     except Exception as e:
         logger.error(f"Venv error: {e}")
         return f"Venv error: {e}"
+
+
 def restricted_exec(code: str, level: str = "basic") -> str:
-    """Execute in restricted namespace using restrictedpython."""
+    """Execute in restricted namespace using restrictedpython."""  # noqa: C901
     try:
         if level == "basic":
-            result = restrictedpython.compile_restricted_exec(code)
+            result = RestrictedPython.compile_restricted_exec(code)
             if result.errors:
                 return f"Restricted compile error: {result.errors}"
-            exec(result.code, restrictedpython.safe_globals, {})
+            exec(result.code, RestrictedPython.safe_globals, {})
         else:
             exec(code, globals())
         return "Executed in restricted mode."
     except Exception as e:
         logger.error(f"Restricted exec error: {e}")
         return f"Restricted exec error: {e}"
+
+
 def isolated_subprocess(cmd: str, custom_env: dict = None) -> str:
     """Run in isolated subprocess."""
     env = os.environ.copy()
     if custom_env:
         env.update(custom_env)
     try:
-        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, env=env, timeout=30, cwd=SANDBOX_DIR)
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=30,
+            cwd=SANDBOX_DIR,
+        )
         return result.stdout if result.returncode == 0 else f"Error: {result.stderr}"
     except Exception as e:
         logger.error(f"Subprocess error: {e}")
         return f"Subprocess error: {e}"
+
+
 # Whitelist for pip packages
-PIP_WHITELIST = ["numpy", "pandas", "matplotlib", "scipy", "sympy", "requests", "beautifulsoup4"]
+PIP_WHITELIST = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "scipy",
+    "sympy",
+    "requests",
+    "beautifulsoup4",
+]
+
+
 def pip_install(venv_path: str, packages: list, upgrade: bool = False) -> str:
     """Install packages in venv using pip, with whitelist check."""
     if any(pkg not in PIP_WHITELIST for pkg in packages):
@@ -990,30 +1242,41 @@ def pip_install(venv_path: str, packages: list, upgrade: bool = False) -> str:
     safe_venv = os.path.abspath(os.path.normpath(os.path.join(SANDBOX_DIR, venv_path)))
     if not safe_venv.startswith(os.path.abspath(SANDBOX_DIR)):
         return "Error: Venv path outside sandbox."
-    venv_pip = os.path.join(safe_venv, 'bin', 'pip')
+    venv_pip = os.path.join(safe_venv, "bin", "pip")
     if not os.path.exists(venv_pip):
         return "Error: Pip not found in venv."
-    cmd = [venv_pip, 'install'] + (['--upgrade'] if upgrade else []) + packages
+    cmd = [venv_pip, "install"] + (["--upgrade"] if upgrade else []) + packages
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         return result.stdout if result.returncode == 0 else f"Error: {result.stderr}"
     except Exception as e:
         logger.error(f"Pip error: {e}")
         return f"Pip error: {e}"
-def chat_log_analyze_embed(convo_id: int, criteria: str, summarize: bool = True, user: str = None) -> str:
+
+
+def chat_log_analyze_embed(
+    convo_id: int, criteria: str, summarize: bool = True, user: str = None
+) -> str:
     if user is None:
         return "Error: user required."
-    c.execute("SELECT messages FROM history WHERE convo_id=? AND user=?", (convo_id, user))
+    c.execute(
+        "SELECT messages FROM history WHERE convo_id=? AND user=?", (convo_id, user)
+    )
     result = c.fetchone()
     if not result:
         return "Error: Chat log not found."
     messages = json.loads(result[0])
     chat_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/")
-    analysis_prompt = f"Analyze this chat log on criteria: {criteria}. Summarize if needed."
+    analysis_prompt = (
+        f"Analyze this chat log on criteria: {criteria}. Summarize if needed."
+    )
     response = client.chat.completions.create(
         model="grok-4-fast-non-reasoning",
-        messages=[{"role": "system", "content": analysis_prompt}, {"role": "user", "content": chat_text}],
+        messages=[
+            {"role": "system", "content": analysis_prompt},
+            {"role": "user", "content": chat_text},
+        ],
         stream=False,
     )
     analysis = response.choices[0].message.content.strip()
@@ -1021,7 +1284,10 @@ def chat_log_analyze_embed(convo_id: int, criteria: str, summarize: bool = True,
         summary_prompt = "Summarize the analysis concisely."
         summary_response = client.chat.completions.create(
             model="grok-4-fast-non-reasoning",
-            messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": analysis}],
+            messages=[
+                {"role": "system", "content": summary_prompt},
+                {"role": "user", "content": analysis},
+            ],
             stream=False,
         )
         analysis = summary_response.choices[0].message.content.strip()
@@ -1035,9 +1301,111 @@ def chat_log_analyze_embed(convo_id: int, criteria: str, summarize: bool = True,
         ids=[mem_key],
         embeddings=[embedding],
         documents=[analysis],
-        metadatas=[{"user": user, "convo_id": convo_id, "type": "chat_log", "salience": 1.0}],
+        metadatas=[
+            {"user": user, "convo_id": convo_id, "type": "chat_log", "salience": 1.0}
+        ],
     )
     return f"Chat log {convo_id} analyzed and embedded as {mem_key}."
+
+
+def yaml_retrieve(
+    query: str = None, top_k: int = 5, filename: str = None
+) -> str:  # noqa: C901
+    """Retrieve YAML content semantically or by exact filename from embedded DB."""
+    if "yaml_ready" not in st.session_state or not st.session_state["yaml_ready"]:
+        return "Error: YAML DB not ready."
+    col = st.session_state["yaml_collection"]
+    embed_model = get_embed_model()
+    if "yaml_cache" not in st.session_state:
+        st.session_state["yaml_cache"] = {}
+    try:
+        if filename:
+            if filename in st.session_state["yaml_cache"]:
+                return st.session_state["yaml_cache"][filename]
+            results = col.query(
+                n_results=1, where={"filename": filename}, include=["documents"]
+            )
+            if results.get("documents") and results["documents"][0]:
+                content = results["documents"][0][0]
+                st.session_state["yaml_cache"][filename] = content
+                return content
+            else:
+                return "YAML not found."
+        else:
+            if not query:
+                return "Error: Query required for semantic search."
+            query_emb = embed_model.encode(query).tolist()
+            results = col.query(
+                query_embeddings=[query_emb],
+                n_results=top_k,
+                include=["documents", "metadatas", "distances"],
+            )
+            if not results.get("documents"):
+                return "No relevant YAMLs found."
+            retrieved = [
+                {"filename": meta["filename"], "content": doc, "distance": dist}
+                for meta, doc, dist in zip(
+                    results["metadatas"][0],
+                    results["documents"][0],
+                    results["distances"][0],
+                )
+            ]
+            return json.dumps(retrieved)
+    except Exception as e:
+        logger.error(f"YAML retrieve error: {e}")
+        return f"YAML retrieve error: {e}"
+
+
+def yaml_refresh(filename: str = None) -> str:  # noqa: C901
+    """Refresh YAML embedding from file system, for one or all."""
+    embed_model = get_embed_model()
+    if not embed_model:
+        return "Error: Embedding model not loaded."
+    col = st.session_state["yaml_collection"]
+    try:
+        if filename:
+            path = os.path.join(YAML_DIR, filename)
+            if not os.path.exists(path):
+                return "Error: File not found."
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            embedding = embed_model.encode(content).tolist()
+            col.upsert(
+                ids=[filename],
+                embeddings=[embedding],
+                documents=[content],
+                metadatas=[{"filename": filename}],
+            )
+            if "yaml_cache" in st.session_state:
+                st.session_state["yaml_cache"][filename] = content
+            return f"YAML '{filename}' refreshed successfully."
+        else:
+            # Refresh all
+            ids = col.get()["ids"]
+            if ids:
+                col.delete(ids=ids)
+            st.session_state["yaml_cache"] = {}
+            files_refreshed = 0
+            for fname in os.listdir(YAML_DIR):
+                if fname.endswith(".yaml"):
+                    path = os.path.join(YAML_DIR, fname)
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    embedding = embed_model.encode(content).tolist()
+                    col.upsert(
+                        ids=[fname],
+                        embeddings=[embedding],
+                        documents=[content],
+                        metadatas=[{"filename": fname}],
+                    )
+                    st.session_state["yaml_cache"][fname] = content
+                    files_refreshed += 1
+            return f"All YAMLs refreshed successfully ({files_refreshed} files)."
+    except Exception as e:
+        logger.error(f"YAML refresh error: {e}")
+        return f"YAML refresh error: {e}"
+
+
 TOOLS = [
     {
         "type": "function",
@@ -1047,7 +1415,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {"type": "string", "description": "Relative path to file."}
+                    "file_path": {
+                        "type": "string",
+                        "description": "Relative path to file.",
+                    }
                 },
                 "required": ["file_path"],
             },
@@ -1061,7 +1432,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {"type": "string", "description": "Relative path to file."},
+                    "file_path": {
+                        "type": "string",
+                        "description": "Relative path to file.",
+                    },
                     "content": {"type": "string", "description": "Content to write."},
                 },
                 "required": ["file_path", "content"],
@@ -1076,7 +1450,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "dir_path": {"type": "string", "description": "Relative dir path (default root)."}
+                    "dir_path": {
+                        "type": "string",
+                        "description": "Relative dir path (default root).",
+                    }
                 },
                 "required": [],
             },
@@ -1104,8 +1481,14 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "sync": {"type": "boolean", "description": "True for NTP sync (default False)."},
-                    "format": {"type": "string", "description": "Format: iso (default), human, json."},
+                    "sync": {
+                        "type": "boolean",
+                        "description": "True for NTP sync (default False).",
+                    },
+                    "format": {
+                        "type": "string",
+                        "description": "Format: iso (default), human, json.",
+                    },
                 },
                 "required": [],
             },
@@ -1120,7 +1503,10 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "code": {"type": "string", "description": "Code to execute."},
-                    "venv_path": {"type": "string", "description": "Optional venv path."},
+                    "venv_path": {
+                        "type": "string",
+                        "description": "Optional venv path.",
+                    },
                 },
                 "required": ["code"],
             },
@@ -1170,13 +1556,22 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "operation": {"type": "string", "enum": ["init", "commit", "branch", "diff"]},
-                    "repo_path": {"type": "string", "description": "Relative path to repo."},
+                    "operation": {
+                        "type": "string",
+                        "enum": ["init", "commit", "branch", "diff"],
+                    },
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Relative path to repo.",
+                    },
                     "message": {
                         "type": "string",
                         "description": "Commit message (for commit).",
                     },
-                    "name": {"type": "string", "description": "Branch name (for branch)."},
+                    "name": {
+                        "type": "string",
+                        "description": "Branch name (for branch).",
+                    },
                 },
                 "required": ["operation", "repo_path"],
             },
@@ -1190,7 +1585,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "db_path": {"type": "string", "description": "Relative path to DB file."},
+                    "db_path": {
+                        "type": "string",
+                        "description": "Relative path to DB file.",
+                    },
                     "query": {"type": "string", "description": "SQL query."},
                     "params": {
                         "type": "array",
@@ -1210,7 +1608,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "Shell command string."}
+                    "command": {
+                        "type": "string",
+                        "description": "Shell command string.",
+                    }
                 },
                 "required": ["command"],
             },
@@ -1243,9 +1644,15 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "url": {"type": "string", "description": "API URL."},
-                    "method": {"type": "string", "description": "GET/POST (default GET)."},
+                    "method": {
+                        "type": "string",
+                        "description": "GET/POST (default GET).",
+                    },
                     "data": {"type": "object", "description": "POST data."},
-                    "mock": {"type": "boolean", "description": "True for mock (default)."},
+                    "mock": {
+                        "type": "boolean",
+                        "description": "True for mock (default).",
+                    },
                 },
                 "required": ["url"],
             },
@@ -1259,7 +1666,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "mem_key": {"type": "string", "description": "Key for the memory entry."},
+                    "mem_key": {
+                        "type": "string",
+                        "description": "Key for the memory entry.",
+                    },
                     "interaction_data": {
                         "type": "object",
                         "description": "Data to consolidate (dict).",
@@ -1277,8 +1687,14 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Query string for similarity search."},
-                    "top_k": {"type": "integer", "description": "Number of top results (default 5)."},
+                    "query": {
+                        "type": "string",
+                        "description": "Query string for similarity search.",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Number of top results (default 5).",
+                    },
                 },
                 "required": ["query"],
             },
@@ -1313,8 +1729,14 @@ TOOLS = [
                         "description": "Time filter: oneDay, oneWeek, oneMonth, oneYear, or noLimit (default).",
                         "enum": ["oneDay", "oneWeek", "oneMonth", "oneYear", "noLimit"],
                     },
-                    "summary": {"type": "boolean", "description": "Include long text summaries (default True)."},
-                    "count": {"type": "integer", "description": "Number of results (1-10, default 5)."},
+                    "summary": {
+                        "type": "boolean",
+                        "description": "Include long text summaries (default True).",
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of results (1-10, default 5).",
+                    },
                 },
                 "required": ["query"],
             },
@@ -1347,7 +1769,10 @@ TOOLS = [
                         "items": {"type": "number"},
                         "description": "Query embedding vector.",
                     },
-                    "top_k": {"type": "integer", "description": "Number of top results (default 5)."},
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Number of top results (default 5).",
+                    },
                     "threshold": {
                         "type": "number",
                         "description": "Min similarity score (default 0.6).",
@@ -1383,7 +1808,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "chunk": {"type": "string", "description": "Text chunk to summarize."}
+                    "chunk": {
+                        "type": "string",
+                        "description": "Text chunk to summarize.",
+                    }
                 },
                 "required": ["chunk"],
             },
@@ -1398,7 +1826,10 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "Search query."},
-                    "top_k": {"type": "integer", "description": "Number of top results (default 5)."},
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Number of top results (default 5).",
+                    },
                 },
                 "required": ["query"],
             },
@@ -1457,16 +1888,13 @@ TOOLS = [
                 "properties": {
                     "sub_agent_type": {
                         "type": "string",
-                        "description": "Type: Planner, Critic, Executor, Worker, Summarizer, Verifier, Moderator (case-insensitive) or custom."
+                        "description": "Type: Planner, Critic, Executor, Worker, Summarizer, Verifier, Moderator (case-insensitive) or custom.",
                     },
-                    "task": {
-                        "type": "string",
-                        "description": "Task for sub-agent."
-                    }
+                    "task": {"type": "string", "description": "Task for sub-agent."},
                 },
-                "required": ["sub_agent_type", "task"]
-            }
-        }
+                "required": ["sub_agent_type", "task"],
+            },
+        },
     },
     {
         "type": "function",
@@ -1478,16 +1906,16 @@ TOOLS = [
                 "properties": {
                     "component": {
                         "type": "string",
-                        "description": "Component to optimize (e.g., prompt)."
+                        "description": "Component to optimize (e.g., prompt).",
                     },
                     "metrics": {
                         "type": "object",
-                        "description": "Performance metrics dict."
-                    }
+                        "description": "Performance metrics dict.",
+                    },
                 },
-                "required": ["component", "metrics"]
-            }
-        }
+                "required": ["component", "metrics"],
+            },
+        },
     },
     # New tool schemas
     {
@@ -1499,7 +1927,10 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "env_name": {"type": "string", "description": "Name of the venv."},
-                    "with_pip": {"type": "boolean", "description": "Include pip (default True)."}
+                    "with_pip": {
+                        "type": "boolean",
+                        "description": "Include pip (default True).",
+                    },
                 },
                 "required": ["env_name"],
             },
@@ -1514,7 +1945,10 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "code": {"type": "string", "description": "Code to execute."},
-                    "level": {"type": "string", "description": "Access level: basic (default) or full."}
+                    "level": {
+                        "type": "string",
+                        "description": "Access level: basic (default) or full.",
+                    },
                 },
                 "required": ["code"],
             },
@@ -1529,7 +1963,10 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "cmd": {"type": "string", "description": "Command to run."},
-                    "custom_env": {"type": "object", "description": "Custom environment variables."}
+                    "custom_env": {
+                        "type": "object",
+                        "description": "Custom environment variables.",
+                    },
                 },
                 "required": ["cmd"],
             },
@@ -1544,8 +1981,15 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "venv_path": {"type": "string", "description": "Path to venv."},
-                    "packages": {"type": "array", "items": {"type": "string"}, "description": "List of packages."},
-                    "upgrade": {"type": "boolean", "description": "Upgrade packages (default False)."}
+                    "packages": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of packages.",
+                    },
+                    "upgrade": {
+                        "type": "boolean",
+                        "description": "Upgrade packages (default False).",
+                    },
                 },
                 "required": ["venv_path", "packages"],
             },
@@ -1560,13 +2004,61 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "convo_id": {"type": "integer", "description": "Conversation ID."},
-                    "criteria": {"type": "string", "description": "Analysis criteria (e.g., 'key topics')."},
-                    "summarize": {"type": "boolean", "description": "Summarize analysis (default True)."}
+                    "criteria": {
+                        "type": "string",
+                        "description": "Analysis criteria (e.g., 'key topics').",
+                    },
+                    "summarize": {
+                        "type": "boolean",
+                        "description": "Summarize analysis (default True).",
+                    },
                 },
                 "required": ["convo_id", "criteria"],
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "yaml_retrieve",
+            "description": "Retrieve YAML content semantically or by filename from embedded DB.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Semantic query (if no filename).",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Top results for semantic (default 5).",
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": "Exact filename for retrieval (optional).",
+                    },
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "yaml_refresh",
+            "description": "Refresh YAML embedding from file system, for one or all.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "description": "Specific filename to refresh (optional; null for all).",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
 ]
 # Tool Dispatcher Dictionary
 TOOL_DISPATCHER = {
@@ -1600,11 +2092,15 @@ TOOL_DISPATCHER = {
     "isolated_subprocess": isolated_subprocess,
     "pip_install": pip_install,
     "chat_log_analyze_embed": chat_log_analyze_embed,
+    "yaml_retrieve": yaml_retrieve,
+    "yaml_refresh": yaml_refresh,
 }
 tool_count = 0
 council_count = 0
 main_count = 0
-def process_tool_calls(tool_calls, current_messages, enable_tools):
+
+
+def process_tool_calls(tool_calls, current_messages, enable_tools):  # noqa: C901
     yield "\n*Thinking... Using tools...*\n"
     tool_outputs = []
     conn.execute("BEGIN")
@@ -1647,6 +2143,8 @@ def process_tool_calls(tool_calls, current_messages, enable_tools):
         )
     conn.commit()
     current_messages.extend(tool_outputs)
+
+
 def call_xai_api(
     model,
     messages,
@@ -1654,7 +2152,7 @@ def call_xai_api(
     stream=True,
     image_files=None,
     enable_tools=False,
-):
+):  # noqa: C901
     client = OpenAI(api_key=API_KEY, base_url="https://api.x.ai/v1/", timeout=300)
     api_messages = [{"role": "system", "content": sys_prompt}]
     # Add history
@@ -1677,16 +2175,19 @@ def call_xai_api(
                 "content": content_parts if len(content_parts) > 1 else msg["content"],
             }
         )
+
     def generate(current_messages):
         global tool_count, council_count, main_count
         max_iterations = 100
         tool_calls_per_convo = st.session_state.get("tool_calls_per_convo", 0)
-        if tool_calls_per_convo > 100: # Rate limiting
+        if tool_calls_per_convo > 100:  # Rate limiting
             yield "Error: Tool call limit exceeded for this conversation."
             return
         for _ in range(max_iterations):
             main_count += 1
-            logger.info(f"API call: Tools: {tool_count} | Council: {council_count} | Main: {main_count}")
+            logger.info(
+                f"API call: Tools: {tool_count} | Council: {council_count} | Main: {main_count}"
+            )
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -1705,11 +2206,17 @@ def call_xai_api(
                     if delta and delta.tool_calls:
                         tool_calls.extend(delta.tool_calls)
                 if not tool_calls:
-                    break # Exit loop if no tools are called
+                    break  # Exit loop if no tools are called
                 current_messages.append(
-                    {"role": "assistant", "content": full_delta_response, "tool_calls": tool_calls}
+                    {
+                        "role": "assistant",
+                        "content": full_delta_response,
+                        "tool_calls": tool_calls,
+                    }
                 )
-                for chunk in process_tool_calls(tool_calls, current_messages, enable_tools):
+                for chunk in process_tool_calls(
+                    tool_calls, current_messages, enable_tools
+                ):
                     yield chunk
             except Exception as e:
                 error_msg = f"API or Tool Error: {traceback.format_exc()}"
@@ -1717,7 +2224,10 @@ def call_xai_api(
                 logger.error(error_msg)
                 st.error(error_msg)
                 break
+
     return generate(api_messages)
+
+
 # Login Page
 def login_page():
     st.title("Welcome to The ApexUltimate Interface")
@@ -1745,25 +2255,31 @@ def login_page():
                     st.error("Username already exists.")
                 else:
                     c.execute(
-                        "INSERT INTO users VALUES (?, ?)", (new_user, hash_password(new_pass))
+                        "INSERT INTO users VALUES (?, ?)",
+                        (new_user, hash_password(new_pass)),
                     )
                     conn.commit()
                     st.success("Registered! Please login.")
+
+
 def load_history(convo_id):
     """Loads a specific conversation from the database into the session state."""
     c.execute(
-        "SELECT messages FROM history WHERE convo_id=? AND user=?", (convo_id, st.session_state["user"])
+        "SELECT messages FROM history WHERE convo_id=? AND user=?",
+        (convo_id, st.session_state["user"]),
     )
-    result = c.fetchone()
-    if result:
+    if result := c.fetchone():
         messages = json.loads(result[0])
         st.session_state["messages"] = messages
         st.session_state["current_convo_id"] = convo_id
         st.rerun()
+
+
 def delete_history(convo_id):
     """Deletes a specific conversation from the database."""
     c.execute(
-        "DELETE FROM history WHERE convo_id=? AND user=?", (convo_id, st.session_state["user"])
+        "DELETE FROM history WHERE convo_id=? AND user=?",
+        (convo_id, st.session_state["user"]),
     )
     conn.commit()
     # If the deleted chat was the one currently loaded, clear the session
@@ -1771,6 +2287,8 @@ def delete_history(convo_id):
         st.session_state["messages"] = []
         st.session_state["current_convo_id"] = 0
     st.rerun()
+
+
 def search_history(query: str):
     """Search history titles by keyword."""
     c.execute(
@@ -1778,6 +2296,8 @@ def search_history(query: str):
         (st.session_state["user"], f"%{query}%"),
     )
     return c.fetchall()
+
+
 def export_convo(format: str = "json"):
     """Export current convo as JSON or MD."""
     if format == "json":
@@ -1788,10 +2308,12 @@ def export_convo(format: str = "json"):
             md += f"**{msg['role'].capitalize()}:** {msg['content']}\n\n"
         return md
     return "Unsupported format."
-def render_sidebar():
+
+
+def render_sidebar():  # noqa: C901
     with st.sidebar:
         st.header("Chat Settings")
-        model = st.selectbox(
+        st.selectbox(
             "Select Model",
             ["grok-4-fast-reasoning", "grok-4", "grok-code-fast-1", "grok-3-mini"],
             key="model_select",
@@ -1808,17 +2330,23 @@ def render_sidebar():
             )
             with open(os.path.join(PROMPTS_DIR, selected_file), "r") as f:
                 prompt_content = f.read()
-            custom_prompt = st.text_area(
-                "Edit System Prompt", value=prompt_content, height=200, key="custom_prompt"
+            st.text_area(
+                "Edit System Prompt",
+                value=prompt_content,
+                height=200,
+                key="custom_prompt",
             )
-            enable_tools = st.checkbox("Enable Tools (Sandboxed)", value=False, key="enable_tools")
+            st.checkbox("Enable Tools (Sandboxed)", value=False, key="enable_tools")
         else:
             st.warning("No prompt files found in ./prompts/")
-            custom_prompt = st.text_area(
-                "System Prompt", value="You are a helpful AI.", height=200, key="custom_prompt"
+            st.text_area(
+                "System Prompt",
+                value="You are a helpful AI.",
+                height=200,
+                key="custom_prompt",
             )
         # The key for the file uploader is important
-        uploaded_images = st.file_uploader(
+        st.file_uploader(
             "Upload Images",
             type=["jpg", "png"],
             accept_multiple_files=True,
@@ -1859,6 +2387,8 @@ def render_sidebar():
             st.metric("Total Inserts", metrics["total_inserts"])
             st.metric("Total Retrieves", metrics["total_retrieves"])
             st.metric("Hit Rate", f"{metrics['hit_rate']:.2%}")
+
+
 def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
     st.title(f"Apex Ultimate - {st.session_state['user']}")
     # --- Main Chat Interface ---
@@ -1886,13 +2416,21 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
                 enable_tools=enable_tools,
             )
             full_response = st.write_stream(generator)
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": full_response}
+        )
         # Save to History
         title_message = next(
-            (msg["content"] for msg in st.session_state.messages if msg["role"] == "user"),
+            (
+                msg["content"]
+                for msg in st.session_state.messages
+                if msg["role"] == "user"
+            ),
             "New Chat",
         )
-        title = (title_message[:40] + "...") if len(title_message) > 40 else title_message
+        title = (
+            (title_message[:40] + "...") if len(title_message) > 40 else title_message
+        )
         messages_json = json.dumps(st.session_state.messages)
         if st.session_state.get("current_convo_id", 0) == 0:
             c.execute(
@@ -1907,13 +2445,55 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
             )
         conn.commit()
         st.rerun()
+
+
 def chat_page():
     render_sidebar()
-    render_chat_interface(st.session_state["model_select"], st.session_state["custom_prompt"], st.session_state["enable_tools"], st.session_state["uploaded_images"])
+    render_chat_interface(
+        st.session_state["model_select"],
+        st.session_state["custom_prompt"],
+        st.session_state["enable_tools"],
+        st.session_state["uploaded_images"],
+    )
+
+
 # Auto-Prune on Startup
 if "auto_prune_done" not in st.session_state:
-    advanced_memory_prune(st.session_state.get("user"), st.session_state.get("current_convo_id"))
+    advanced_memory_prune(
+        st.session_state.get("user"), st.session_state.get("current_convo_id")
+    )
     st.session_state["auto_prune_done"] = True
+# YAML Embeddings Init
+if "yaml_collection" not in st.session_state:
+    try:
+        st.session_state["yaml_collection"] = st.session_state[
+            "chroma_client"
+        ].get_or_create_collection(
+            name="yaml_vectors", metadata={"hnsw:space": "cosine"}
+        )
+        embed_model = get_embed_model()
+        if embed_model:
+            st.session_state["yaml_cache"] = {}
+            for filename in os.listdir(YAML_DIR):
+                if filename.endswith(".yaml"):
+                    path = os.path.join(YAML_DIR, filename)
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    embedding = embed_model.encode(content).tolist()
+                    st.session_state["yaml_collection"].upsert(
+                        ids=[filename],
+                        embeddings=[embedding],
+                        documents=[content],
+                        metadatas=[{"filename": filename}],
+                    )
+                    st.session_state["yaml_cache"][filename] = content
+            st.session_state["yaml_ready"] = True
+        else:
+            logger.warning("Embedding model not available; YAML embeddings skipped.")
+            st.session_state["yaml_ready"] = False
+    except Exception as e:
+        logger.error(f"YAML embeddings init failed: {e}")
+        st.session_state["yaml_ready"] = False
 # Simple Test Function
 def run_tests():
     class TestTools(unittest.TestCase):
@@ -1922,9 +2502,12 @@ def run_tests():
             self.assertIn("successfully", result)
             content = fs_read_file("test.txt")
             self.assertEqual(content, "Hello")
+
     suite = unittest.TestLoader().loadTestsFromTestCase(TestTools)
     runner = unittest.TextTestRunner()
     runner.run(suite)
+
+
 # Main App Logic
 if __name__ == "__main__":
     if "logged_in" not in st.session_state:
