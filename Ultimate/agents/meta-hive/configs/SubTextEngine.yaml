@@ -1,0 +1,50 @@
+subtext_engine:
+  version: 1.0
+  description: Conceptual engine for subtext detection and query refinement across agents.
+
+  parameters:
+    subtext_indicators: ["sarcasm", "frustration", "enthusiasm", "implied intent"]
+    intensity_scale: 10
+
+  class: subtext_engine
+  slots:
+    orchestrator: {initarg: orchestrator, accessor: orchestrator}
+    subtext_indicators: {initform: *subtext_indicators*, accessor: subtext_indicators}
+    intensity_scale: {initform: *intensity_scale*, accessor: intensity_scale}
+    working_memory: {initform: null, accessor: working_memory}
+
+  methods:
+    detect_subtext:
+      description: Detect subtext in query.
+      steps:
+        - Batch generate_embedding for query.
+        - Compute scores using _assess_uncertainty for each indicator.
+        - Collect tags where score >0.5, formatted as "indicator(intensity)" with trigger and confidence.
+        - Return :subtext_tags and :inferred_intent as primary detected.
+
+    update_working_memory:
+      description: Update memory with detection.
+      steps:
+        - Detect subtext.
+        - Append to summary.
+        - Set working_memory.
+        - Determine key based on collective_agents.
+        - Batch memory_insert.
+        - Return working_memory.
+
+    process_query_with_subtext:
+      description: Process with subtext.
+      steps:
+        - Detect subtext.
+        - Refine query with inferred intent.
+        - Call orchestrator process-query on refined.
+        - Return tuned response.
+
+    evolve_self:
+      description: Evolve on feedback.
+      steps:
+        - Decompose feedback for new indicator.
+        - Push to subtext_indicators.
+        - Evolve module subtext_engine with added indicator.
+
+  usage: Register in subengine_registry with lambda to make instance and process-query-with-subtext.

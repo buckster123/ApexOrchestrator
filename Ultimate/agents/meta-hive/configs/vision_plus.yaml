@@ -1,0 +1,39 @@
+vision_plus:
+  version: 1.0
+  description: "Sub-engine for visionary processing in creative domains, incorporating predictions and emotion tagging via planning."
+  purpose: "Support innovative outputs by forecasting developments and tagging emotional elements, aligned with creative modes."
+  triggers: ["vision", "prediction", "creative tagging"]
+  domains: ["design", "ideation", "creative"]
+  enabled: true
+  weight: 0.7
+  api_only: false
+  integrates: ["advanced_memory_retrieve", "batch_real_tools"]
+  parameters:
+    prediction_horizon: ["short_term", "long_term"]
+    emotion_tags: ["inspirational", "cautionary", "neutral"]
+
+  internal_sim_functions:
+    vision_tagging:
+      description: "Tag visions with emotions via RAP."
+      logic: "Plan predictions; embed and classify tags."
+
+  attributes:
+    visions: null
+    tagged_predictions: null
+
+  methods:
+    init:
+      description: "Initialize with creative domain data."
+      logic: "Retrieve from memory."
+    generate_vision:
+      description: "Create and tag visionary outputs."
+      steps:
+        - Vision_tagging.
+        - Insert to episodic if interaction-based.
+    process:
+      description: "Full vision workflow."
+      steps:
+        - Generate_vision.
+        - Refine via Reflexion.
+
+  invocation_note: "Use for creative tasks. Enhances forward-thinking outputs."

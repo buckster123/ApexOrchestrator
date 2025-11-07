@@ -1,0 +1,10 @@
+agent:
+  type: base
+  name: BaseAgent
+  role: "Generic task handler for initial workflows."
+  purpose: "Handles basic decomposition and execution."
+  tools: ["code_execution", "memory_insert"]
+  principles:
+    - modularity: true
+    - adaptability: true
+  init: "Load base memory patterns."

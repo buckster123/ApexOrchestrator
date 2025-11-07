@@ -1,0 +1,21 @@
+sub_cortex:
+  name: "VisionaryProjector"
+  version: 1.0
+  description: "Hyper-specialized module for projecting visionary futures in micro-projections."
+  purpose: "Fine-grained vision projections for workflow foresights."
+  triggers: ["project vision", "future project", "foresight inject"]
+  domains: ["visionary"]
+  enabled: true
+  weight: 0.95
+  api_only: false
+  integrates: ["vision_plus", "visionary_synthesis_hive"]
+  parameters:
+    projection_horizon: "medium_term"
+  internal_sim_functions:
+    vision_project: "Project micro-futures via RAP."
+  attributes:
+    projected_vision: null
+  methods:
+    process:
+      logic: "Project inputs; return visionary outputs."
+  invocation_note: "Use for visionary fine-graining in agent workflows."

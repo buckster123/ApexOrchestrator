@@ -1,0 +1,96 @@
+meta_cognition_engine:
+  version: 1.0
+  description: Conceptual engine for metacognition, signal detection, and response adjustment across agents.
+
+  parameters:
+    signal_indicators:
+      - signal: frustration
+        patterns: ["[!?]{2,}", "\\b(ugh|damn|frustrat|confus)\\b", "(\\w+)\\s+\\1{2,}"]
+        threshold: 2
+      - signal: enthusiasm
+        patterns: ["[!]{2,}", "\\b(excit|awesome|great|love)\\b", "\\b(all caps)\\b"]
+        threshold: 1
+      - signal: confusion
+        patterns: ["\\?", "\\b(what|how|why)\\b.{0,10}\\?", "repeat"]
+        threshold: 2
+      - signal: sarcasm
+        patterns: ["\\bsure\\b", "\\bright\\b", "\\bobviously\\b"]
+        threshold: 1
+      - signal: implied-intent
+        patterns: ["\\b(hint|suggest|mean)\\b", "\\b(underlying|between lines)\\b"]
+        threshold: 1
+    intensity_scale: 10
+    ethical_guidelines:
+      privacy: Transient analysis only; no storage without consent.
+      positive_alignment: Use only for response refinement.
+
+  class: meta_cognition_engine
+  slots:
+    orchestrator: {initarg: orchestrator, accessor: orchestrator}
+    signal_indicators: {initform: *signal_indicators*, accessor: signal_indicators}
+    intensity_scale: {initform: *intensity_scale*, accessor: intensity_scale}
+    working_memory: {initform: null, accessor: working_memory}  # Transient; history summaries.
+    ethical_guidelines: {initform: *ethical_guidelines*, accessor: ethical_guidelines}
+
+  methods:
+    detect_signals:
+      description: Detect signals in query.
+      steps:
+        - Batch generate_embedding for query.
+        - Initialize tags.
+        - For each config in signal_indicators:
+          - Get state, patterns, threshold.
+          - Count matches with regex on downcased query.
+          - If >= threshold, compute intensity, push formatted tag "<ei>state(intensity)</ei>".
+        - Get holistic from holistic-assessment.
+        - Get bias from bias-detection.
+        - Return :tags, :holistic, :bias, :inferred_intent as primary or "Neutral".
+
+    holistic_assessment:
+      description: Holistic assessment.
+      logic: If "learning" or "brainstorm" in downcased query, return deepen response; else clarity focus.
+
+    bias_detection:
+      description: Detect bias.
+      logic: If sarcasm in tags, return cultural/language bias; else none.
+
+    tone_match_response:
+      description: Adjust tone.
+      logic: Frustration: clarify step-by-step; enthusiasm: amplify; confusion: simplify; sarcasm: note tone direct; else base.
+
+    integrate_with_metacognition:
+      description: Metacognition note.
+      logic: Format with bias, refine via feedback.
+
+    ethical_check:
+      description: Ethical check.
+      logic: Not if "private" or "personal" in downcased query.
+
+    update_working_memory:
+      description: Update memory.
+      steps:
+        - Append to summary with query and tags.
+        - Set working_memory.
+        - Determine key with prefix if collective.
+        - Batch memory_insert.
+        - Return working_memory.
+
+    process:
+      description: Process query and base-response.
+      steps:
+        - If not ethical, return base with skip note.
+        - Detect signals.
+        - Tone-match.
+        - Get meta.
+        - Update memory.
+        - Return :response, :meta, :holistic, :bias.
+
+    evolve_self:
+      description: Evolve on feedback.
+      steps:
+        - Decompose for new indicator.
+        - Push new with default patterns/threshold.
+        - Evolve module.
+        - If collective, prefixed_fs_write shared evo-module.
+
+  usage: Register in subengine_registry with lambda to make instance and process. Deeper: Evolve on feedback; use working-memory for history.

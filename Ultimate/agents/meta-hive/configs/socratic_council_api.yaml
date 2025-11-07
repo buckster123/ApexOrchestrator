@@ -1,0 +1,39 @@
+socratic_council_api:
+  version: 1.0
+  description: "Wrapper sub-engine for Socratic council API, enabling iterative debates with personas for refinement."
+  purpose: "Facilitate advanced multi-agent discussions with safety and optimization, handling errors through fallbacks."
+  triggers: ["council", "debate", "MAD"]
+  domains: ["orchestration", "analysis"]
+  enabled: true
+  weight: 0.9
+  api_only: true
+  integrates: ["socratic_api_council", "batch_real_tools"]
+  parameters:
+    max_rounds: 5
+    safety_checks: true
+
+  internal_sim_functions:
+    branch_refinement:
+      description: "Refine branches with Reflexion."
+      logic: "Map branches to analyzed versions."
+
+  attributes:
+    council_results: null
+
+  methods:
+    init:
+      description: "Initialize API parameters."
+      logic: "Load from env.yaml."
+    run_council:
+      description: "Execute council with handling."
+      steps:
+        - Branch_refinement.
+        - Batch socratic_api_council.
+        - Handle errors with fallback.
+    process:
+      description: "Full API workflow."
+      steps:
+        - Run_council.
+        - Log to episodic.
+
+  invocation_note: "Core for debate tasks. Ensures safe, optimized councils."

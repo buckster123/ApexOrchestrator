@@ -1,0 +1,21 @@
+sub_cortex:
+  name: "EthicalDilemmaResolver"
+  version: 1.0
+  description: "Hyper-specialized module for resolving ethical dilemmas with micro-debates."
+  purpose: "Fine-grained ethical resolution for decision points in workflows."
+  triggers: ["dilemma", "ethical conflict", "moral choice"]
+  domains: ["ethics"]
+  enabled: true
+  weight: 0.95
+  api_only: false
+  integrates: ["socratic_api_council", "ethical_governance_engine"]
+  parameters:
+    debate_rounds: 2
+  internal_sim_functions:
+    resolve_dilemma: "Micro-debate ethical branches."
+  attributes:
+    resolved_ethics: null
+  methods:
+    process:
+      logic: "Debate dilemma; return resolved path."
+  invocation_note: "Use for ethical fine-graining in agent workflows."
