@@ -90,18 +90,18 @@ Visualizing core dependencies (Mermaid graph):
 
 ```mermaid
 graph TD
-    A[Python 3.12] --> B[Streamlit UI]
-    A --> C[OpenAI Client (xAI API)]
-    A --> D[SentenceTransformer Embeddings]
-    D --> E[ChromaDB Vector Store]
-    A --> F[NetworkX Workflow Graphs]
-    A --> G[PyYAML Component Loading]
-    A --> H[RestrictedPython Code Exec]
-    A --> I[SQLite Memory DB]
-    A --> J[Tools: fs_*, git_ops, etc.]
-    J --> K[Sandbox Dir]
+    A["Python 3.12"] --> B["Streamlit UI"]
+    A --> C["OpenAI Client (xAI API)"]
+    A --> D["SentenceTransformer Embeddings"]
+    D --> E["ChromaDB Vector Store"]
+    A --> F["NetworkX Workflow Graphs"]
+    A --> G["PyYAML Component Loading"]
+    A --> H["RestrictedPython Code Exec"]
+    A --> I["SQLite Memory DB"]
+    A --> J["Tools: fs_*, git_ops, etc."]
+    J --> K["Sandbox Dir"]
     subgraph "STEM Libs"
-        A --> L[numpy, sympy, scipy, etc.]
+        A --> L["numpy, sympy, scipy, etc."]
     end
     style A fill:#f9f,stroke:#333
 ```
