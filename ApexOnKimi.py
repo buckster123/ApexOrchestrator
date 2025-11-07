@@ -40,6 +40,7 @@ import yaml
 from black import FileMode, format_str
 from dotenv import load_dotenv
 from openai import OpenAI
+from pathlib import Path
 from passlib.hash import sha256_crypt
 from sentence_transformers import SentenceTransformer
 
@@ -1171,7 +1172,7 @@ def restricted_exec(code: str, level: str = "basic") -> str:
 
 
 def isolated_subprocess(cmd: str, custom_env: dict = None) -> str:
-    """Run command in isolated subprocess."""
+    """Run command in isolated subprocess with custom env."""
     env = os.environ.copy()
     if custom_env:
         env.update(custom_env)
@@ -1424,6 +1425,62 @@ def yaml_refresh(filename: str = None) -> str:  # noqa: C901
     except Exception as e:
         logger.error(f"YAML refresh error: {e}")
         return f"YAML refresh error: {e}"
+
+
+def moonshot_upload_file(file_path: str) -> str:
+    """Upload a file to Moonshot and extract content."""
+    client = OpenAI(api_key=API_KEY, base_url="https://api.moonshot.ai/v1/")
+    try:
+        # Check limits (approximate; full check requires list_files)
+        file_list = client.files.list()
+        if len(file_list.data) >= 1000:
+            return "Error: Max 1,000 files reached. Delete some files."
+        total_size = sum(f.bytes for f in file_list.data)
+        file_size = os.path.getsize(file_path)
+        if total_size + file_size > 10 * 1024 * 1024 * 1024:
+            return "Error: Total size exceeds 10GB."
+        if file_size > 100 * 1024 * 1024:
+            return "Error: File exceeds 100MB."
+        
+        file_object = client.files.create(file=Path(file_path), purpose="file-extract")
+        file_content = client.files.content(file_id=file_object.id).text
+        return json.dumps({"file_id": file_object.id, "content": file_content})
+    except Exception as e:
+        logger.error(f"File upload error: {e}")
+        return f"Error: {e}"
+
+
+def moonshot_list_files() -> str:
+    """List all uploaded files."""
+    client = OpenAI(api_key=API_KEY, base_url="https://api.moonshot.ai/v1/")
+    try:
+        file_list = client.files.list()
+        return json.dumps([f.dict() for f in file_list.data])
+    except Exception as e:
+        logger.error(f"List files error: {e}")
+        return f"Error: {e}"
+
+
+def moonshot_delete_file(file_id: str) -> str:
+    """Delete a file by ID."""
+    client = OpenAI(api_key=API_KEY, base_url="https://api.moonshot.ai/v1/")
+    try:
+        client.files.delete(file_id=file_id)
+        return f"File {file_id} deleted."
+    except Exception as e:
+        logger.error(f"Delete file error: {e}")
+        return f"Error: {e}"
+
+
+def moonshot_get_file_info(file_id: str) -> str:
+    """Get file info by ID."""
+    client = OpenAI(api_key=API_KEY, base_url="https://api.moonshot.ai/v1/")
+    try:
+        file_info = client.files.retrieve(file_id=file_id)
+        return json.dumps(file_info.dict())
+    except Exception as e:
+        logger.error(f"Get file info error: {e}")
+        return f"Error: {e}"
 
 
 TOOLS = [
@@ -2079,6 +2136,59 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "moonshot_upload_file",
+            "description": "Upload a file to Moonshot and extract content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file to upload.",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "moonshot_list_files",
+            "description": "List all uploaded files.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "moonshot_delete_file",
+            "description": "Delete a file by ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {"file_id": {"type": "string"}},
+                "required": ["file_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "moonshot_get_file_info",
+            "description": "Get file info by ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {"file_id": {"type": "string"}},
+                "required": ["file_id"],
+            },
+        },
+    },
 ]
 # Tool Dispatcher Dictionary
 TOOL_DISPATCHER = {
@@ -2114,6 +2224,10 @@ TOOL_DISPATCHER = {
     "chat_log_analyze_embed": chat_log_analyze_embed,
     "yaml_retrieve": yaml_retrieve,
     "yaml_refresh": yaml_refresh,
+    "moonshot_upload_file": moonshot_upload_file,
+    "moonshot_list_files": moonshot_list_files,
+    "moonshot_delete_file": moonshot_delete_file,
+    "moonshot_get_file_info": moonshot_get_file_info,
 }
 tool_count = 0
 council_count = 0
@@ -2172,8 +2286,11 @@ def call_xai_api(
     stream=True,
     image_files=None,
     enable_tools=False,
+    file_messages=None,
 ):  # noqa: C901
     api_messages = [{"role": "system", "content": sys_prompt}]
+    if file_messages:
+        api_messages += file_messages
     # Add history
     for msg in messages:
         content_parts = [{"type": "text", "text": msg["content"]}]
@@ -2367,6 +2484,37 @@ def export_convo(format: str = "json"):
     return "Unsupported format."
 
 
+def process_uploaded_docs(uploaded_docs, user, convo_id):
+    """Process uploaded documents: Upload to Moonshot, extract, embed into memory."""
+    client = OpenAI(api_key=API_KEY, base_url="https://api.moonshot.ai/v1/")
+    file_messages = []
+    file_ids = []
+    for file in uploaded_docs:
+        try:
+            if file.size > 100 * 1024 * 1024:
+                st.error(f"File {file.name} exceeds 100MB limit.")
+                continue
+            temp_path = Path(file.name)
+            with open(temp_path, "wb") as f:
+                f.write(file.getvalue())
+            file_object = client.files.create(file=temp_path, purpose="file-extract")
+            file_content = client.files.content(file_id=file_object.id).text
+            file_messages.append({"role": "system", "content": file_content})
+            file_ids.append(file_object.id)
+            os.remove(temp_path)
+            # Embed into memory
+            advanced_memory_consolidate(
+                mem_key=f"file_{file_object.id}",
+                interaction_data={"content": file_content, "filename": file.name, "extracted_at": datetime.now().isoformat()},
+                user=user,
+                convo_id=convo_id
+            )
+        except Exception as e:
+            st.error(f"Error processing {file.name}: {e}")
+    st.session_state["uploaded_file_ids"] = file_ids  # For management
+    return file_messages
+
+
 def render_sidebar():  # noqa: C901
     with st.sidebar:
         st.header("Chat Settings")
@@ -2409,6 +2557,12 @@ def render_sidebar():  # noqa: C901
             accept_multiple_files=True,
             key="uploaded_images",
         )
+        st.file_uploader(
+            "Upload Files for Context",
+            type=["pdf", "txt", "csv", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "md", "jpeg", "png", "bmp", "gif", "svg", "svgz", "webp", "ico", "xbm", "dib", "pjp", "tif", "pjpeg", "avif", "dot", "apng", "epub", "tiff", "jfif", "html", "json", "mobi", "log", "go", "h", "c", "cpp", "cxx", "cc", "cs", "java", "js", "css", "jsp", "php", "py", "py3", "asp", "yaml", "yml", "ini", "conf", "ts", "tsx"],
+            accept_multiple_files=True,
+            key="uploaded_docs",
+        )
         st.divider()
         if st.button("➕ New Chat", use_container_width=True):
             st.session_state["messages"] = []
@@ -2446,7 +2600,7 @@ def render_sidebar():  # noqa: C901
             st.metric("Hit Rate", f"{metrics['hit_rate']:.2%}")
 
 
-def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
+def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images, uploaded_docs):
     st.title(f"Apex MetaHive - {st.session_state['user']}")
     # --- Main Chat Interface ---
     if "messages" not in st.session_state:
@@ -2455,6 +2609,8 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
         st.session_state["current_convo_id"] = 0
     if "tool_calls_per_convo" not in st.session_state:
         st.session_state["tool_calls_per_convo"] = 0
+    if "uploaded_file_ids" not in st.session_state:
+        st.session_state["uploaded_file_ids"] = []
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"], unsafe_allow_html=True)
@@ -2464,6 +2620,12 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
             st.markdown(prompt, unsafe_allow_html=False)
         with st.chat_message("assistant"):
             images_to_process = uploaded_images if uploaded_images else []
+            file_messages = process_uploaded_docs(uploaded_docs, st.session_state["user"], st.session_state["current_convo_id"]) if uploaded_docs else []
+            # Retrieve relevant memories for RAG
+            retrieved_json = advanced_memory_retrieve(prompt, user=st.session_state["user"], convo_id=st.session_state["current_convo_id"])
+            retrieved = json.loads(retrieved_json) if not isinstance(retrieved_json, str) else []
+            for ret in retrieved:
+                file_messages.append({"role": "system", "content": ret["summary"]})
             generator = call_xai_api(
                 model,
                 st.session_state.messages,
@@ -2471,6 +2633,7 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
                 stream=True,
                 image_files=images_to_process,
                 enable_tools=enable_tools,
+                file_messages=file_messages,
             )
             thinking_stream = ""
             response_stream = ""
@@ -2538,6 +2701,7 @@ def chat_page():
         st.session_state["custom_prompt"],
         st.session_state["enable_tools"],
         st.session_state["uploaded_images"],
+        st.session_state["uploaded_docs"],
     )
 
 
