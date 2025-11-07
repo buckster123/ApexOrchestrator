@@ -2287,7 +2287,7 @@ def call_xai_api(
 
 # Login Page
 def login_page():
-    st.title("Apex On Kimi Interface")
+    st.title("Apex MetaHive Interface")
     tab1, tab2 = st.tabs(["Login", "Register"])
     with tab1:
         with st.form("login_form"):
@@ -2447,7 +2447,7 @@ def render_sidebar():  # noqa: C901
 
 
 def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
-    st.title(f"Apex On Kimi - {st.session_state['user']}")
+    st.title(f"Apex MetaHive - {st.session_state['user']}")
     # --- Main Chat Interface ---
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
@@ -2457,7 +2457,7 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
         st.session_state["tool_calls_per_convo"] = 0
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"], unsafe_allow_html=False)
+            st.markdown(msg["content"], unsafe_allow_html=True)
     if prompt := st.chat_input("Your command, ape?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -2472,28 +2472,34 @@ def render_chat_interface(model, custom_prompt, enable_tools, uploaded_images):
                 image_files=images_to_process,
                 enable_tools=enable_tools,
             )
-            thinking_expander = st.expander("Thinking...", expanded=True)
             thinking_stream = ""
-            thinking_placeholder = thinking_expander.empty()
-            response_container = st.container()
             response_stream = ""
-            response_placeholder = response_container.empty()
-            tool_container = st.container()
             tool_stream = ""
-            tool_placeholder = tool_container.empty()
-            full_response = ""
+            response_html = ""
+            assistant_placeholder = st.empty()
             for part in generator:
                 ptype, pcontent = part
                 if ptype == 'reasoning':
                     thinking_stream += pcontent
-                    thinking_placeholder.markdown(thinking_stream)
                 elif ptype == 'content':
                     response_stream += pcontent
-                    response_placeholder.markdown(response_stream)
-                    full_response += pcontent
                 elif ptype == 'tool':
                     tool_stream += pcontent
-                    tool_placeholder.markdown(tool_stream)
+                response_html = f"""
+<details>
+<summary>Thinking...</summary>
+{html.escape(thinking_stream)}
+</details>
+
+<details>
+<summary>Tools</summary>
+{html.escape(tool_stream)}
+</details>
+
+{response_stream}
+"""
+                assistant_placeholder.markdown(response_html, unsafe_allow_html=True)
+            full_response = response_html
         st.session_state.messages.append(
             {"role": "assistant", "content": full_response}
         )
