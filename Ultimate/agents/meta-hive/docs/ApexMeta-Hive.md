@@ -1,4 +1,3 @@
-```
 # ApexMeta: The Meta-Orchestrator of ApexUltimate
 
 [![Version](https://img.shields.io/badge/version-1.1-blue.svg)](https://github.com/ApexUltimate/ApexMeta)
@@ -323,4 +322,3 @@ ApexMeta: Decomp → Infer gap → Birth 'ethical_quantum.yaml' → Refresh → 
 
 *"We are not bound by the code we inherit, but by the possibilities we birth."*  
 —End of Deep-Dive
-```
